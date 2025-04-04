@@ -188,7 +188,11 @@ private:
 
 		(ParamFloat<px4::params::MPC_XY_ERR_MAX>) _param_mpc_xy_err_max,
 		(ParamFloat<px4::params::MPC_YAWRAUTO_MAX>) _param_mpc_yawrauto_max,
-		(ParamFloat<px4::params::MPC_YAWRAUTO_ACC>) _param_mpc_yawrauto_acc
+		(ParamFloat<px4::params::MPC_YAWRAUTO_ACC>) _param_mpc_yawrauto_acc,
+
+		(ParamFloat<px4::params::STA_SLIDING_C>) _param_sta_sliding_c,  /**< example parameter */
+		(ParamFloat<px4::params::STA_Z_ERROR_UP>) _param_sta_z_error_up,  /**< example parameter */
+		(ParamFloat<px4::params::STA_ITA_NORM_UP>) _param_sta_ita_norm_up
 	);
 
 	math::WelfordMean<float> _sample_interval_s{};

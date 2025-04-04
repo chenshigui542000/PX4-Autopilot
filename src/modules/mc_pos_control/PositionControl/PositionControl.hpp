@@ -44,6 +44,13 @@
 #include <uORB/topics/trajectory_setpoint.h>
 #include <uORB/topics/vehicle_attitude_setpoint.h>
 #include <uORB/topics/vehicle_local_position_setpoint.h>
+#include <SuperTwisting.hpp>
+#include <px4_platform_common/module_params.h>
+#include <uORB/SubscriptionInterval.hpp>
+#include <uORB/topics/parameter_update.h>
+
+
+
 
 struct PositionControlStates {
 	matrix::Vector3f position;
@@ -190,6 +197,8 @@ public:
 	 */
 	static const trajectory_setpoint_s empty_trajectory_setpoint;
 
+	void _set_sta_param(float sta_sliding_c_new, float sta_z_error_up_new, float sta_ita_norm_up_new);
+
 private:
 	// The range limits of the hover thrust configuration/estimate
 	static constexpr float HOVER_THRUST_MIN = 0.05f;
@@ -233,4 +242,14 @@ private:
 	matrix::Vector3f _thr_sp; /**< desired thrust */
 	float _yaw_sp{}; /**< desired heading */
 	float _yawspeed_sp{}; /** desired yaw-speed */
+
+	// DEFINE_PARAMETERS(
+	// 	(ParamFloat<px4::params::STA_SLIDING_C>) _param_sta_sliding_c,  /**< example parameter */
+	// 	(ParamFloat<px4::params::STA_Z_ERROR_UP>) _param_sta_z_error_up  /**< example parameter */
+	// )
+
+	SuperTwisting _super_twisting{};
+	// uORB::SubscriptionInterval _parameter_update_sub{ORB_ID(parameter_update), 1_s};
+
+
 };

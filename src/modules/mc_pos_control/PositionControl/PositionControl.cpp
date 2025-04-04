@@ -86,6 +86,9 @@ void PositionControl::updateHoverThrust(const float hover_thrust_new)
 
 	_vel_int(2) += (_acc_sp(2) - CONSTANTS_ONE_G) * previous_hover_thrust / _hover_thrust
 		       + CONSTANTS_ONE_G - _acc_sp(2);
+
+	_super_twisting._set_sta_w((_acc_sp(2) - CONSTANTS_ONE_G) * previous_hover_thrust / _hover_thrust
+			+ CONSTANTS_ONE_G - _acc_sp(2));
 }
 
 void PositionControl::setState(const PositionControlStates &states)
@@ -107,11 +110,24 @@ void PositionControl::setInputSetpoint(const trajectory_setpoint_s &setpoint)
 
 bool PositionControl::update(const float dt)
 {
+
+	// if(_parameter_update_sub.updated()){
+	// 	parameter_update_s param_update;
+	// 	_parameter_update_sub.copy(&param_update);
+	// 	updateParams();
+	// 	float sta_sliding_c_tmp = _param_sta_sliding_c.get();
+	// 	float sta_z_error_pos_up = _param_sta_z_error_up.get();
+	// 	_super_twisting._update_sta_sliding_c(sta_sliding_c_tmp);
+	// 	_super_twisting._update_sta_sliding_z_error_up(sta_z_error_pos_up);
+	// }
+
 	bool valid = _inputValid();
 
 	if (valid) {
+		_super_twisting._staZPositionControl(dt, _pos, _pos_sp, _vel);
 		_positionControl();
 		_velocityControl(dt);
+
 
 		_yawspeed_sp = PX4_ISFINITE(_yawspeed_sp) ? _yawspeed_sp : 0.f;
 		_yaw_sp = PX4_ISFINITE(_yaw_sp) ? _yaw_sp : _yaw; // TODO: better way to disable yaw control
@@ -147,6 +163,7 @@ void PositionControl::_velocityControl(const float dt)
 	Vector3f acc_sp_velocity = vel_error.emult(_gain_vel_p) + _vel_int - _vel_dot.emult(_gain_vel_d);
 
 	// No control input from setpoints or corresponding states which are NAN
+	acc_sp_velocity(2) = -_super_twisting._getStaThrust();
 	ControlMath::addIfNotNanVector3f(_acc_sp, acc_sp_velocity);
 
 	_accelerationControl();
@@ -267,4 +284,11 @@ void PositionControl::getAttitudeSetpoint(vehicle_attitude_setpoint_s &attitude_
 {
 	ControlMath::thrustToAttitude(_thr_sp, _yaw_sp, attitude_setpoint);
 	attitude_setpoint.yaw_sp_move_rate = _yawspeed_sp;
+}
+
+void PositionControl::_set_sta_param(float sta_sliding_c_new, float sta_z_error_up_new, float sta_ita_norm_up_new)
+{
+	_super_twisting._update_sta_sliding_c(sta_sliding_c_new);
+	_super_twisting._update_sta_sliding_z_error_up(sta_z_error_up_new);
+	_super_twisting._update_sta_ita_norm_up(sta_ita_norm_up_new);
 }
