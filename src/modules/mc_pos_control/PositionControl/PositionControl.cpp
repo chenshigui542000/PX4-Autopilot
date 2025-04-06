@@ -124,7 +124,7 @@ bool PositionControl::update(const float dt)
 	bool valid = _inputValid();
 
 	if (valid) {
-		_super_twisting._staZPositionControl(dt, _pos, _pos_sp, _vel);
+		_super_twisting._staZPositionControl(dt, _pos, _pos_sp, _vel, _vel_sp, _acc_sp);
 		_positionControl();
 		_velocityControl(dt);
 

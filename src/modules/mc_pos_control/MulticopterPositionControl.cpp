@@ -435,7 +435,8 @@ void MulticopterPositionControl::Run()
 		}
 
 		_trajectory_setpoint_sub.update(&_setpoint);
-
+		// std::cout << "_setpoint.position" << _setpoint.position[2] << std::endl;
+		// std::cout << "_setpoint.velocity" << _setpoint.velocity[2] << std::endl;
 		adjustSetpointForEKFResets(vehicle_local_position, _setpoint);
 
 		if (_vehicle_control_mode.flag_multicopter_position_control_enabled) {

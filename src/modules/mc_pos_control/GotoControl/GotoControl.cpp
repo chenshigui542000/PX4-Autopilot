@@ -69,6 +69,8 @@ void GotoControl::update(const float dt, const matrix::Vector3f &position, const
 
 	const Vector3f position_setpoint(_goto_setpoint_sub.get().position);
 
+	// std::cout << "_goto_setpoint_sub.get().position is " << _goto_setpoint_sub.get().position << std::endl;
+
 	if (!position_setpoint.isAllFinite()) {
 		// TODO: error messaging
 		_need_smoother_reset = true;

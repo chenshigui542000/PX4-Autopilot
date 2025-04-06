@@ -52,7 +52,7 @@
 #include <uORB/topics/goto_setpoint.h>
 #include <uORB/topics/trajectory_setpoint.h>
 #include <uORB/topics/vehicle_constraints.h>
-
+#include <iostream>
 class GotoControl
 {
 public:

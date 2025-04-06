@@ -12,6 +12,9 @@
 #include <uORB/SubscriptionInterval.hpp>
 #include <uORB/topics/parameter_update.h>
 
+#include <uORB/topics/sta_status.h>
+
+
 class SuperTwisting
 {
 private:
@@ -20,8 +23,10 @@ private:
 	float _sta_sliding_c = 1.2;
 	float _sta_C = 2 * CONSTANTS_ONE_G;
 	float _sta_UM = 3 * CONSTANTS_ONE_G;
-	float _sta_alpha = (float)8.5 * _mc_mass * CONSTANTS_ONE_G / 150;
-	float _sta_lamada = (float)77.4 / 1000000;
+	// float _sta_alpha = (float)8.5 * _mc_mass * CONSTANTS_ONE_G / 150;
+	// float _sta_lamada = (float)77.4 / 1000000;
+	float _sta_alpha = (float)2.0;
+	float _sta_lamada = (float)4.0;
 	float _sta_w_dot = 0.0;
 	float _sta_w = 0.0;
 
@@ -38,12 +43,15 @@ private:
 	float _sta_last_one_pos_sp = 0.0;
 	float _sta_last_two_pos_sp = 0.0;
 	float _sta_last_three_pos_sp = 0.0;
+	uORB::Publication<sta_status_s> _publish_sta_status{ORB_ID(sta_status)};
+
+	sta_status_s _sta_status;
 	// uORB::Publication<sta_msg_s>  _publish_sta_msg{ORB_ID(sta_msg)};
 public:
 	SuperTwisting(/* args */);
 	~SuperTwisting();
 
-	void _staZPositionControl(const float dt, matrix::Vector3f& _pos, matrix::Vector3f& _pos_sp, matrix::Vector3f& _vel);
+	void _staZPositionControl(const float dt, matrix::Vector3f& _pos, matrix::Vector3f& _pos_sp, matrix::Vector3f& _vel, matrix::Vector3f& _vel_sp, matrix::Vector3f& _acc_sp);
 	void _set_sta_w(float less_num);
 	float _getStaThrust();
 	void _update_sta_sliding_c(float new_value);
