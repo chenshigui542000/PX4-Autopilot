@@ -52,7 +52,7 @@ void AttitudeControl::setProportionalGain(const matrix::Vector3f &proportional_g
 	}
 }
 
-matrix::Vector3f AttitudeControl::update(const Quatf &q) const
+matrix::Vector3f AttitudeControl::update(const Quatf &q)
 {
 	Quatf qd = _attitude_setpoint_q;
 
@@ -91,6 +91,9 @@ matrix::Vector3f AttitudeControl::update(const Quatf &q) const
 	// also taking care of the antipodal unit quaternion ambiguity
 	const Vector3f eq = 2.f * qe.canonical().imag();
 
+	//copy attitude error
+	_attitude_error = eq;
+
 	// calculate angular rates setpoint
 	Vector3f rate_setpoint = eq.emult(_proportional_gain);
 
@@ -111,4 +114,24 @@ matrix::Vector3f AttitudeControl::update(const Quatf &q) const
 	}
 
 	return rate_setpoint;
+}
+
+
+//get attitude error
+matrix::Vector3f AttitudeControl::get_attitude_error()
+{
+	return _attitude_error;
+}
+
+
+matrix::Vector3f AttitudeControl::get_attitude_setpoint()
+{
+	matrix::Eulerf euler_attitude_setpoint(_attitude_setpoint_q);
+
+	matrix::Vector3f result;
+	result(0) = euler_attitude_setpoint.phi();
+	result(1) = euler_attitude_setpoint.theta();
+	result(2) = euler_attitude_setpoint.psi();
+
+	return result;
 }

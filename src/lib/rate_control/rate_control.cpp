@@ -52,6 +52,9 @@ void RateControl::setSaturationStatus(const Vector3<bool> &saturation_positive,
 {
 	_control_allocator_saturation_positive = saturation_positive;
 	_control_allocator_saturation_negative = saturation_negative;
+
+	//att sta control saturation status
+	_att_sta_control.setSaturationStatus(saturation_positive, saturation_negative);
 }
 
 void RateControl::setPositiveSaturationFlag(size_t axis, bool is_saturated)
@@ -59,6 +62,10 @@ void RateControl::setPositiveSaturationFlag(size_t axis, bool is_saturated)
 	if (axis < 3) {
 		_control_allocator_saturation_positive(axis) = is_saturated;
 	}
+
+	//att sta
+
+	_att_sta_control.setPositiveSaturationFlag(axis, is_saturated);
 }
 
 void RateControl::setNegativeSaturationFlag(size_t axis, bool is_saturated)
@@ -66,6 +73,9 @@ void RateControl::setNegativeSaturationFlag(size_t axis, bool is_saturated)
 	if (axis < 3) {
 		_control_allocator_saturation_negative(axis) = is_saturated;
 	}
+
+	//att sta
+	_att_sta_control.setNegativeSaturationFlag(axis, is_saturated);
 }
 
 Vector3f RateControl::update(const Vector3f &rate, const Vector3f &rate_sp, const Vector3f &angular_accel,
@@ -75,12 +85,14 @@ Vector3f RateControl::update(const Vector3f &rate, const Vector3f &rate_sp, cons
 	Vector3f rate_error = rate_sp - rate;
 
 	// PID control with feed forward
-	const Vector3f torque = _gain_p.emult(rate_error) + _rate_int - _gain_d.emult(angular_accel) + _gain_ff.emult(rate_sp);
+	Vector3f torque = _gain_p.emult(rate_error) + _rate_int - _gain_d.emult(angular_accel) + _gain_ff.emult(rate_sp);
 
 	// update integral only if we are not landed
 	if (!landed) {
 		updateIntegral(rate_error, dt);
 	}
+
+	torque = _att_sta_control.getStaTorque();
 
 	return torque;
 }
@@ -119,7 +131,12 @@ void RateControl::updateIntegral(Vector3f &rate_error, const float dt)
 
 void RateControl::getRateControlStatus(rate_ctrl_status_s &rate_ctrl_status)
 {
-	rate_ctrl_status.rollspeed_integ = _rate_int(0);
-	rate_ctrl_status.pitchspeed_integ = _rate_int(1);
-	rate_ctrl_status.yawspeed_integ = _rate_int(2);
+	// rate_ctrl_status.rollspeed_integ = _rate_int(0);
+	// rate_ctrl_status.pitchspeed_integ = _rate_int(1);
+	// rate_ctrl_status.yawspeed_integ = _rate_int(2);
+	matrix::Vector3f att_sta_w = _att_sta_control.getStaW();
+
+	rate_ctrl_status.rollspeed_integ = att_sta_w(0);
+	rate_ctrl_status.pitchspeed_integ = att_sta_w(1);
+	rate_ctrl_status.yawspeed_integ = att_sta_w(2);
 }

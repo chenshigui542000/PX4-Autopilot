@@ -83,8 +83,19 @@ void MulticopterPositionControl::parameters_update(bool force)
 
 		float sample_freq_hz = 1.f / _sample_interval_s.mean();
 
-		_control._set_sta_param(_param_sta_sliding_c.get(), _param_sta_z_error_up.get(), _param_sta_ita_norm_up.get());
+		// _control._set_sta_param(_param_sta_sliding_c.get(), _param_sta_z_error_up.get(), _param_sta_ita_norm_up.get());
 
+		_control._pos_sta_control.setPosStaParams(_param_pos_sta_mass.get(), _param_pos_sta_c.get(),
+							_param_pos_sta_al.get(), _param_pos_sta_la.get());
+
+		_control._pos_sta_control.setPosStaWlimit(_param_pos_sta_w_lim.get());
+
+		_control._pos_sta_control.setPosStaNormLimit(_param_pos_sta_nmax.get(), _param_pos_sta_nmin.get());
+
+		_control._pos_sta_control.setPosXyStaNormLimit(
+			Vector2f(_param_pos_x_sta_nmin.get(), _param_pos_y_sta_nmin.get()),
+			Vector2f(_param_pos_x_sta_nmax.get(), _param_pos_y_sta_nmax.get())
+		);
 		// velocity notch filter
 		if ((_param_mpc_vel_nf_frq.get() > 0.f) && (_param_mpc_vel_nf_bw.get() > 0.f)) {
 			_vel_xy_notch_filter.setParameters(sample_freq_hz, _param_mpc_vel_nf_frq.get(), _param_mpc_vel_nf_bw.get());
@@ -591,6 +602,12 @@ void MulticopterPositionControl::Run()
 			_control.getAttitudeSetpoint(attitude_setpoint);
 			attitude_setpoint.timestamp = hrt_absolute_time();
 			_vehicle_attitude_setpoint_pub.publish(attitude_setpoint);
+
+			//publish position sta status
+			position_sta_status_s pos_sta_status;
+			_control._pos_sta_control.getPosZStaStatus(pos_sta_status);
+			pos_sta_status.timestamp = hrt_absolute_time();
+			_pos_sta_status_pub.publish(pos_sta_status);
 
 		} else {
 			// an update is necessary here because otherwise the takeoff state doesn't get skipped with non-altitude-controlled modes

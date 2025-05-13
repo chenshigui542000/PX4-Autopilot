@@ -60,6 +60,9 @@
 #include <uORB/topics/vehicle_status.h>
 #include <uORB/topics/vehicle_thrust_setpoint.h>
 #include <uORB/topics/vehicle_torque_setpoint.h>
+#include <uORB/topics/attitude_error.h>
+#include <iostream>
+#include <uORB/topics/attitude_sta_status.h>
 
 using namespace time_literals;
 
@@ -100,6 +103,9 @@ private:
 	uORB::Subscription _vehicle_rates_setpoint_sub{ORB_ID(vehicle_rates_setpoint)};
 	uORB::Subscription _vehicle_status_sub{ORB_ID(vehicle_status)};
 
+	//sub attitude error
+	uORB::Subscription _attitude_error_sub{ORB_ID(attitude_error)};
+
 	uORB::SubscriptionInterval _parameter_update_sub{ORB_ID(parameter_update), 1_s};
 
 	uORB::SubscriptionCallbackWorkItem _vehicle_angular_velocity_sub{this, ORB_ID(vehicle_angular_velocity)};
@@ -109,6 +115,9 @@ private:
 	uORB::Publication<vehicle_rates_setpoint_s>	_vehicle_rates_setpoint_pub{ORB_ID(vehicle_rates_setpoint)};
 	uORB::Publication<vehicle_torque_setpoint_s>	_vehicle_torque_setpoint_pub;
 	uORB::Publication<vehicle_thrust_setpoint_s>	_vehicle_thrust_setpoint_pub;
+
+	//pub att sta status
+	uORB::Publication<attitude_sta_status_s>          _attitude_sta_status_pub{ORB_ID(attitude_sta_status)};
 
 	vehicle_control_mode_s	_vehicle_control_mode{};
 	vehicle_status_s	_vehicle_status{};
@@ -163,6 +172,36 @@ private:
 		(ParamFloat<px4::params::MC_ACRO_SUPEXPO>) _param_mc_acro_supexpo,		/**< superexpo stick curve shape (roll & pitch) */
 		(ParamFloat<px4::params::MC_ACRO_SUPEXPOY>) _param_mc_acro_supexpoy,		/**< superexpo stick curve shape (yaw) */
 
-		(ParamBool<px4::params::MC_BAT_SCALE_EN>) _param_mc_bat_scale_en
+		(ParamBool<px4::params::MC_BAT_SCALE_EN>) _param_mc_bat_scale_en,
+
+
+		//some sta params
+		(ParamFloat<px4::params::ATT_STA_R_C>) _param_att_sta_r_c,
+		(ParamFloat<px4::params::ATT_STA_P_C>) _param_att_sta_p_c,
+		(ParamFloat<px4::params::ATT_STA_Y_C>) _param_att_sta_y_c,
+
+		(ParamFloat<px4::params::ATT_STA_R_AL>) _param_att_sta_r_al,
+		(ParamFloat<px4::params::ATT_STA_P_AL>) _param_att_sta_p_al,
+		(ParamFloat<px4::params::ATT_STA_Y_AL>) _param_att_sta_y_al,
+
+		(ParamFloat<px4::params::ATT_STA_R_LA>) _param_att_sta_r_la,
+		(ParamFloat<px4::params::ATT_STA_P_LA>) _param_att_sta_p_la,
+		(ParamFloat<px4::params::ATT_STA_Y_LA>) _param_att_sta_y_la,
+
+		(ParamFloat<px4::params::ATT_STA_R_LIM>) _param_att_sta_r_lim,
+		(ParamFloat<px4::params::ATT_STA_P_LIM>) _param_att_sta_p_lim,
+		(ParamFloat<px4::params::ATT_STA_Y_LIM>) _param_att_sta_y_lim,
+
+		(ParamFloat<px4::params::ATT_STA_R_I>) _param_att_sta_r_i,
+		(ParamFloat<px4::params::ATT_STA_P_I>) _param_att_sta_p_i,
+		(ParamFloat<px4::params::ATT_STA_Y_I>) _param_att_sta_y_i,
+
+		(ParamFloat<px4::params::ATT_STA_R_NMAX>) _param_att_sta_r_nmax,
+		(ParamFloat<px4::params::ATT_STA_P_NMAX>) _param_att_sta_p_nmax,
+		(ParamFloat<px4::params::ATT_STA_Y_NMAX>) _param_att_sta_y_nmax,
+
+		(ParamFloat<px4::params::ATT_STA_R_NMIN>) _param_att_sta_r_nmin,
+		(ParamFloat<px4::params::ATT_STA_P_NMIN>) _param_att_sta_p_nmin,
+		(ParamFloat<px4::params::ATT_STA_Y_NMIN>) _param_att_sta_y_nmin
 	)
 };

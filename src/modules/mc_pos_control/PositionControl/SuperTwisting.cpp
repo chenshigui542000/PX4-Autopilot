@@ -28,11 +28,6 @@ void SuperTwisting::_staZPositionControl(const float dt, matrix::Vector3f& _pos,
 	}
 
 
-	// if(fabs(_sta_last_three_pos_sp - _pos_sp(2)) < (float)0.001){
-	// 	_sta_int_z_pos_error = z_pos_error;
-	// }else{
-	// 	_sta_int_z_pos_error += z_pos_error;
-	// }
 
 	_sta_int_z_pos_error = z_pos_error;
 
@@ -70,7 +65,7 @@ void SuperTwisting::_staZPositionControl(const float dt, matrix::Vector3f& _pos,
 		ita_norm = fabs(ita);
 	}
 
-	_sta_thrust = _sta_sliding_c * deri_z_pos + _sta_lamada * ita / sqrt(ita_norm) + _sta_w  - _acc_sp(2) - _sta_sliding_c * _vel_sp(2);
+	_sta_thrust = _sta_sliding_c *(_vel(2) - _vel_sp(2)) + _sta_lamada * ita / sqrt(ita_norm) + _sta_w  - _acc_sp(2) ;
 
 	if(!PX4_ISFINITE(_sta_thrust))_sta_thrust = 0;
 

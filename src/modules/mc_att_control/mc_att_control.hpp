@@ -55,10 +55,13 @@
 #include <uORB/topics/vehicle_local_position.h>
 #include <uORB/topics/vehicle_rates_setpoint.h>
 #include <uORB/topics/vehicle_status.h>
+#include <uORB/topics/attitude_error.h>
 #include <lib/mathlib/math/filter/AlphaFilter.hpp>
 #include <lib/slew_rate/SlewRate.hpp>
 
 #include <AttitudeControl.hpp>
+
+#include <uORB/topics/attitude_all_status.h>
 
 using namespace time_literals;
 
@@ -113,6 +116,12 @@ private:
 
 	uORB::Publication<vehicle_rates_setpoint_s>     _vehicle_rates_setpoint_pub{ORB_ID(vehicle_rates_setpoint)};    /**< rate setpoint publication */
 	uORB::Publication<vehicle_attitude_setpoint_s>  _vehicle_attitude_setpoint_pub;
+
+	//add  publish attitude error
+	uORB::Publication<attitude_error_s>             _attitude_error_pub{ORB_ID(attitude_error)};
+
+	//add attitude status and setpoint
+	uORB::Publication<attitude_all_status_s>        _attitude_all_status_pub{ORB_ID(attitude_all_status)};
 
 	manual_control_setpoint_s       _manual_control_setpoint {};    /**< manual control setpoint */
 	vehicle_control_mode_s          _vehicle_control_mode {};       /**< vehicle control mode */

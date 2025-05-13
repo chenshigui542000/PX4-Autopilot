@@ -45,6 +45,10 @@ using namespace px4::logger;
 
 void LoggedTopics::add_default_topics()
 {
+	add_topic("attitude_all_status");
+	add_topic("position_sta_status");
+	add_topic("attitude_sta_status");
+	add_topic("attitude_error");
 	add_topic("sta_status");
 	add_topic("action_request");
 	add_topic("actuator_armed");

@@ -43,12 +43,17 @@
 
 #include <mathlib/mathlib.h>
 #include <uORB/topics/rate_ctrl_status.h>
+#include <uORB/topics/attitude_sta_status.h>
+#include <attitude_sta_control.hpp>
 
 class RateControl
 {
 public:
 	RateControl() = default;
 	~RateControl() = default;
+
+	//att sta class
+	AttitudeStaControl _att_sta_control;
 
 	/**
 	 * Set the rate control PID gains
@@ -100,7 +105,7 @@ public:
 	 * Set the integral term to 0 to prevent windup
 	 * @see _rate_int
 	 */
-	void resetIntegral() { _rate_int.zero(); }
+	void resetIntegral() { _rate_int.zero(); _att_sta_control.resetIntW();}
 
 	/**
 	 * Set the integral term to 0 for specific axes
@@ -112,6 +117,7 @@ public:
 		if (axis < 3) {
 			_rate_int(axis) = 0.f;
 		}
+		_att_sta_control.resetIntW(axis);
 	}
 
 	/**

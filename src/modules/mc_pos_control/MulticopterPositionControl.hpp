@@ -68,6 +68,11 @@
 #include <uORB/topics/vehicle_local_position.h>
 #include <uORB/topics/vehicle_local_position_setpoint.h>
 #include <iostream>
+
+//my position sta status
+#include <uORB/topics/position_sta_status.h>
+
+
 using namespace time_literals;
 
 class MulticopterPositionControl : public ModuleBase<MulticopterPositionControl>, public ModuleParams,
@@ -98,6 +103,10 @@ private:
 	uORB::PublicationData<takeoff_status_s>              _takeoff_status_pub{ORB_ID(takeoff_status)};
 	uORB::Publication<vehicle_attitude_setpoint_s>	     _vehicle_attitude_setpoint_pub{ORB_ID(vehicle_attitude_setpoint)};
 	uORB::Publication<vehicle_local_position_setpoint_s> _local_pos_sp_pub{ORB_ID(vehicle_local_position_setpoint)};	/**< vehicle local position setpoint publication */
+
+	//publish position sta status
+	uORB::Publication<position_sta_status_s> 	     _pos_sta_status_pub{ORB_ID(position_sta_status)};  //position sta status publish
+
 
 	uORB::SubscriptionCallbackWorkItem _local_pos_sub{this, ORB_ID(vehicle_local_position)};	/**< vehicle local position */
 
@@ -190,9 +199,24 @@ private:
 		(ParamFloat<px4::params::MPC_YAWRAUTO_MAX>) _param_mpc_yawrauto_max,
 		(ParamFloat<px4::params::MPC_YAWRAUTO_ACC>) _param_mpc_yawrauto_acc,
 
-		(ParamFloat<px4::params::STA_SLIDING_C>) _param_sta_sliding_c,  /**< example parameter */
-		(ParamFloat<px4::params::STA_Z_ERROR_UP>) _param_sta_z_error_up,  /**< example parameter */
-		(ParamFloat<px4::params::STA_ITA_NORM_UP>) _param_sta_ita_norm_up
+		//position supertwisting control
+		(ParamFloat<px4::params::POS_STA_C>) _param_pos_sta_c,  /**< example parameter */
+		(ParamFloat<px4::params::POS_STA_MASS>) _param_pos_sta_mass,  /**< example parameter */
+		(ParamFloat<px4::params::POS_STA_AL>) _param_pos_sta_al,
+
+		(ParamFloat<px4::params::POS_STA_LA>) _param_pos_sta_la,  /**< example parameter */
+		(ParamFloat<px4::params::POS_STA_W_LIM>) _param_pos_sta_w_lim,  /**< example parameter */
+		(ParamFloat<px4::params::POS_STA_NMAX>) _param_pos_sta_nmax,
+		(ParamFloat<px4::params::POS_STA_NMIN>) _param_pos_sta_nmin,
+
+		(ParamFloat<px4::params::POS_X_STA_NMAX>) _param_pos_x_sta_nmax,
+		(ParamFloat<px4::params::POS_X_STA_NMIN>) _param_pos_x_sta_nmin,
+
+		(ParamFloat<px4::params::POS_Y_STA_NMAX>) _param_pos_y_sta_nmax,
+		(ParamFloat<px4::params::POS_Y_STA_NMIN>) _param_pos_y_sta_nmin
+
+
+
 	);
 
 	math::WelfordMean<float> _sample_interval_s{};

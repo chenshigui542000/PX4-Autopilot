@@ -348,6 +348,35 @@ MulticopterAttitudeControl::Run()
 			rates_setpoint.timestamp = hrt_absolute_time();
 
 			_vehicle_rates_setpoint_pub.publish(rates_setpoint);
+
+			//publish attitude error
+			attitude_error_s attitude_error{};
+			Vector3f attitude_error_get = _attitude_control.get_attitude_error();
+			attitude_error.timestamp = hrt_absolute_time();
+			attitude_error.roll_error = attitude_error_get(0);
+			attitude_error.pitch_error = attitude_error_get(1);
+			attitude_error.yaw_error = attitude_error_get(2);
+
+			_attitude_error_pub.publish(attitude_error);
+
+
+			attitude_all_status_s attitude_all_status;
+			matrix::Vector3f attitude_setpoint_status = _attitude_control.get_attitude_setpoint();
+
+			matrix::Eulerf attitude_status(q);
+
+			attitude_all_status.timestamp = hrt_absolute_time();
+			attitude_all_status.roll = attitude_status.phi();
+			attitude_all_status.pitch = attitude_status.theta();
+			attitude_all_status.yaw = attitude_status.psi();
+			attitude_all_status.roll_setpoint = attitude_setpoint_status(0);
+			attitude_all_status.pitch_setpoint = attitude_setpoint_status(1);
+			attitude_all_status.yaw_setpoint = attitude_setpoint_status(2);
+
+			_attitude_all_status_pub.publish(attitude_all_status);
+
+
+
 		}
 
 		if (_landed) {

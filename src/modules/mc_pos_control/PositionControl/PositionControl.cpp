@@ -87,7 +87,7 @@ void PositionControl::updateHoverThrust(const float hover_thrust_new)
 	_vel_int(2) += (_acc_sp(2) - CONSTANTS_ONE_G) * previous_hover_thrust / _hover_thrust
 		       + CONSTANTS_ONE_G - _acc_sp(2);
 
-	_super_twisting._set_sta_w((_acc_sp(2) - CONSTANTS_ONE_G) * previous_hover_thrust / _hover_thrust
+	_pos_sta_control.lessPosStaW((_acc_sp(2) - CONSTANTS_ONE_G) * previous_hover_thrust / _hover_thrust
 			+ CONSTANTS_ONE_G - _acc_sp(2));
 }
 
@@ -111,20 +111,11 @@ void PositionControl::setInputSetpoint(const trajectory_setpoint_s &setpoint)
 bool PositionControl::update(const float dt)
 {
 
-	// if(_parameter_update_sub.updated()){
-	// 	parameter_update_s param_update;
-	// 	_parameter_update_sub.copy(&param_update);
-	// 	updateParams();
-	// 	float sta_sliding_c_tmp = _param_sta_sliding_c.get();
-	// 	float sta_z_error_pos_up = _param_sta_z_error_up.get();
-	// 	_super_twisting._update_sta_sliding_c(sta_sliding_c_tmp);
-	// 	_super_twisting._update_sta_sliding_z_error_up(sta_z_error_pos_up);
-	// }
 
 	bool valid = _inputValid();
 
 	if (valid) {
-		_super_twisting._staZPositionControl(dt, _pos, _pos_sp, _vel, _vel_sp, _acc_sp);
+		_pos_sta_control.update(dt, _pos, _pos_sp, _vel, _vel_sp, _vel_dot);
 		_positionControl();
 		_velocityControl(dt);
 
@@ -160,10 +151,16 @@ void PositionControl::_velocityControl(const float dt)
 
 	// PID velocity control
 	Vector3f vel_error = _vel_sp - _vel;
+
+	//modify vel error
+	vel_error(0) = _pos_sta_control.getVelErrorDivNorm(vel_error(0), 0);
+	vel_error(1) = _pos_sta_control.getVelErrorDivNorm(vel_error(1), 1);
+
+
 	Vector3f acc_sp_velocity = vel_error.emult(_gain_vel_p) + _vel_int - _vel_dot.emult(_gain_vel_d);
 
 	// No control input from setpoints or corresponding states which are NAN
-	acc_sp_velocity(2) = -_super_twisting._getStaThrust();
+	// acc_sp_velocity(2) =  _pos_sta_control.getPosStaThrust();
 	ControlMath::addIfNotNanVector3f(_acc_sp, acc_sp_velocity);
 
 	_accelerationControl();
@@ -173,6 +170,8 @@ void PositionControl::_velocityControl(const float dt)
 	    (_thr_sp(2) <= -_lim_thr_max && vel_error(2) <= 0.f)) {
 		vel_error(2) = 0.f;
 	}
+
+	_pos_sta_control.updateIntW(_thr_sp(2), _lim_thr_min, _lim_thr_max, dt);
 
 	// Prioritize vertical control while keeping a horizontal margin
 	const Vector2f thrust_sp_xy(_thr_sp);
@@ -286,9 +285,3 @@ void PositionControl::getAttitudeSetpoint(vehicle_attitude_setpoint_s &attitude_
 	attitude_setpoint.yaw_sp_move_rate = _yawspeed_sp;
 }
 
-void PositionControl::_set_sta_param(float sta_sliding_c_new, float sta_z_error_up_new, float sta_ita_norm_up_new)
-{
-	_super_twisting._update_sta_sliding_c(sta_sliding_c_new);
-	_super_twisting._update_sta_sliding_z_error_up(sta_z_error_up_new);
-	_super_twisting._update_sta_ita_norm_up(sta_ita_norm_up_new);
-}

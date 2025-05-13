@@ -98,11 +98,21 @@ public:
 	 * @param q estimation of the current vehicle attitude unit quaternion
 	 * @return [rad/s] body frame 3D angular rate setpoint vector to be executed by the rate controller
 	 */
-	matrix::Vector3f update(const matrix::Quatf &q) const;
+	matrix::Vector3f update(const matrix::Quatf &q);
+
+	//add get attitude  error funciton
+	matrix::Vector3f get_attitude_error();
+
+	matrix::Vector3f get_attitude_setpoint();
 
 private:
 	matrix::Vector3f _proportional_gain;
 	matrix::Vector3f _rate_limit;
+
+	//add attitude error
+
+	matrix::Vector3f _attitude_error;
+
 	float _yaw_w{0.f}; ///< yaw weight [0,1] to deprioritize caompared to roll and pitch
 
 	matrix::Quatf _attitude_setpoint_q; ///< latest known attitude setpoint e.g. from position control

@@ -44,7 +44,7 @@
 #include <uORB/topics/trajectory_setpoint.h>
 #include <uORB/topics/vehicle_attitude_setpoint.h>
 #include <uORB/topics/vehicle_local_position_setpoint.h>
-#include <SuperTwisting.hpp>
+#include <PositionStaControl.hpp>
 #include <px4_platform_common/module_params.h>
 #include <uORB/SubscriptionInterval.hpp>
 #include <uORB/topics/parameter_update.h>
@@ -168,7 +168,7 @@ public:
 	 * Set the integral term in xy to 0.
 	 * @see _vel_int
 	 */
-	void resetIntegral() { _vel_int.setZero(); }
+	void resetIntegral() { _vel_int.setZero(); _pos_sta_control.resetPosStaW();}
 	void resetIntegralXY() { _vel_int.xy() = matrix::Vector2f(); }
 
 	/**
@@ -197,7 +197,8 @@ public:
 	 */
 	static const trajectory_setpoint_s empty_trajectory_setpoint;
 
-	void _set_sta_param(float sta_sliding_c_new, float sta_z_error_up_new, float sta_ita_norm_up_new);
+	// void _set_sta_param(float sta_sliding_c_new, float sta_z_error_up_new, float sta_ita_norm_up_new);
+	PositionStaControl _pos_sta_control;
 
 private:
 	// The range limits of the hover thrust configuration/estimate
@@ -248,7 +249,6 @@ private:
 	// 	(ParamFloat<px4::params::STA_Z_ERROR_UP>) _param_sta_z_error_up  /**< example parameter */
 	// )
 
-	SuperTwisting _super_twisting{};
 	// uORB::SubscriptionInterval _parameter_update_sub{ORB_ID(parameter_update), 1_s};
 
 

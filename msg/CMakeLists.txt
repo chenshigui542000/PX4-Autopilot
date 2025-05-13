@@ -37,6 +37,10 @@ cmake_policy(SET CMP0057 NEW)
 include(px4_list_make_absolute)
 
 set(msg_files
+	AttitudeAllStatus.msg
+	PositionStaStatus.msg
+	AttitudeStaStatus.msg
+	AttitudeError.msg
 	StaStatus.msg
 	ActionRequest.msg
 	ActuatorArmed.msg
