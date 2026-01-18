@@ -44,6 +44,7 @@
 #pragma once
 
 #include <cmath>
+#include <mathlib/mathlib.h>
 #include <px4_platform_common/defines.h>
 
 class IstaController
