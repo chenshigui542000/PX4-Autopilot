@@ -139,22 +139,45 @@ void PositionControl::_positionControl()
 
 void PositionControl::_velocityControl(const float dt)
 {
-	// Constrain vertical velocity integral
-	_vel_int(2) = math::constrain(_vel_int(2), -CONSTANTS_ONE_G, CONSTANTS_ONE_G);
+	// Constrain vertical velocity integral (only used when PID is active)
+	if (!_ista_enabled) {
+		_vel_int(2) = math::constrain(_vel_int(2), -CONSTANTS_ONE_G, CONSTANTS_ONE_G);
+	}
 
-	// PID velocity control
+	// ===== BEGIN VELOCITY CONTROL LAW =====
 	Vector3f vel_error = _vel_sp - _vel;
-	Vector3f acc_sp_velocity = vel_error.emult(_gain_vel_p) + _vel_int - _vel_dot.emult(_gain_vel_d);
+	Vector3f acc_sp_velocity;
+
+	if (_ista_enabled) {
+		// ISTA velocity control (replaces P+I part of PID)
+		// Each axis runs independently through the implicit super-twisting algorithm
+		acc_sp_velocity(0) = _ista_x.update(vel_error(0), dt);
+		acc_sp_velocity(1) = _ista_y.update(vel_error(1), dt);
+		acc_sp_velocity(2) = _ista_z.update(vel_error(2), dt);
+
+		// Optionally keep D-term for additional damping (recommended for first integration)
+		if (_ista_keep_d) {
+			acc_sp_velocity -= _vel_dot.emult(_gain_vel_d);
+		}
+
+	} else {
+		// Original PID velocity control
+		acc_sp_velocity = vel_error.emult(_gain_vel_p) + _vel_int - _vel_dot.emult(_gain_vel_d);
+	}
 
 	// No control input from setpoints or corresponding states which are NAN
 	ControlMath::addIfNotNanVector3f(_acc_sp, acc_sp_velocity);
+	// ===== END VELOCITY CONTROL LAW =====
 
 	_accelerationControl();
 
-	// Integrator anti-windup in vertical direction
-	if ((_thr_sp(2) >= -_lim_thr_min && vel_error(2) >= 0.f) ||
-	    (_thr_sp(2) <= -_lim_thr_max && vel_error(2) <= 0.f)) {
-		vel_error(2) = 0.f;
+	// ===== BEGIN ANTI-WINDUP & INTEGRATOR UPDATE =====
+	// Integrator anti-windup in vertical direction (PID only)
+	if (!_ista_enabled) {
+		if ((_thr_sp(2) >= -_lim_thr_min && vel_error(2) >= 0.f) ||
+		    (_thr_sp(2) <= -_lim_thr_max && vel_error(2) <= 0.f)) {
+			vel_error(2) = 0.f;
+		}
 	}
 
 	// Prioritize vertical control while keeping a horizontal margin
@@ -182,23 +205,27 @@ void PositionControl::_velocityControl(const float dt)
 		_thr_sp.xy() = thrust_sp_xy / thrust_sp_xy_norm * thrust_max_xy;
 	}
 
-	// Use tracking Anti-Windup for horizontal direction: during saturation, the integrator is used to unsaturate the output
-	// see Anti-Reset Windup for PID controllers, L.Rundqwist, 1990
-	const Vector2f acc_sp_xy_produced = Vector2f(_thr_sp) * (CONSTANTS_ONE_G / _hover_thrust);
+	// Anti-Windup for horizontal direction
+	// For PID: use tracking ARW (L.Rundqwist, 1990)
+	// For ISTA: TODO - ARW feedback to nu is not implemented yet; ISTA has inherent robustness
+	if (!_ista_enabled) {
+		const Vector2f acc_sp_xy_produced = Vector2f(_thr_sp) * (CONSTANTS_ONE_G / _hover_thrust);
 
-	// The produced acceleration can be greater or smaller than the desired acceleration due to the saturations and the actual vertical thrust (computed independently).
-	// The ARW loop needs to run if the signal is saturated only.
-	if (_acc_sp.xy().norm_squared() > acc_sp_xy_produced.norm_squared()) {
-		const float arw_gain = 2.f / _gain_vel_p(0);
-		const Vector2f acc_sp_xy = _acc_sp.xy();
+		// The produced acceleration can be greater or smaller than the desired acceleration due to the saturations
+		// The ARW loop needs to run if the signal is saturated only.
+		if (_acc_sp.xy().norm_squared() > acc_sp_xy_produced.norm_squared()) {
+			const float arw_gain = 2.f / _gain_vel_p(0);
+			const Vector2f acc_sp_xy = _acc_sp.xy();
 
-		vel_error.xy() = Vector2f(vel_error) - arw_gain * (acc_sp_xy - acc_sp_xy_produced);
+			vel_error.xy() = Vector2f(vel_error) - arw_gain * (acc_sp_xy - acc_sp_xy_produced);
+		}
+
+		// Make sure integral doesn't get NAN
+		ControlMath::setZeroIfNanVector3f(vel_error);
+		// Update integral part of velocity control (PID only)
+		_vel_int += vel_error.emult(_gain_vel_i) * dt;
 	}
-
-	// Make sure integral doesn't get NAN
-	ControlMath::setZeroIfNanVector3f(vel_error);
-	// Update integral part of velocity control
-	_vel_int += vel_error.emult(_gain_vel_i) * dt;
+	// ===== END ANTI-WINDUP & INTEGRATOR UPDATE =====
 }
 
 void PositionControl::_accelerationControl()
@@ -267,4 +294,28 @@ void PositionControl::getAttitudeSetpoint(vehicle_attitude_setpoint_s &attitude_
 {
 	ControlMath::thrustToAttitude(_thr_sp, _yaw_sp, attitude_setpoint);
 	attitude_setpoint.yaw_sp_move_rate = _yawspeed_sp;
+}
+
+void PositionControl::setIstaParams(bool enabled, float lambda1_xy, float lambda2_xy,
+				    float lambda1_z, float lambda2_z, bool keep_d)
+{
+	_ista_enabled = enabled;
+	_ista_keep_d = keep_d;
+
+	_ista_x.setGains(lambda1_xy, lambda2_xy);
+	_ista_y.setGains(lambda1_xy, lambda2_xy);
+	_ista_z.setGains(lambda1_z, lambda2_z);
+}
+
+void PositionControl::resetIsta()
+{
+	_ista_x.reset();
+	_ista_y.reset();
+	_ista_z.reset();
+}
+
+void PositionControl::resetIstaXY()
+{
+	_ista_x.reset();
+	_ista_y.reset();
 }

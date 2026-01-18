@@ -188,7 +188,15 @@ private:
 
 		(ParamFloat<px4::params::MPC_XY_ERR_MAX>) _param_mpc_xy_err_max,
 		(ParamFloat<px4::params::MPC_YAWRAUTO_MAX>) _param_mpc_yawrauto_max,
-		(ParamFloat<px4::params::MPC_YAWRAUTO_ACC>) _param_mpc_yawrauto_acc
+		(ParamFloat<px4::params::MPC_YAWRAUTO_ACC>) _param_mpc_yawrauto_acc,
+
+		// ISTA (Implicit Super-Twisting Algorithm) velocity control
+		(ParamInt<px4::params::MPC_VEL_ISTA_EN>)  _param_mpc_vel_ista_en,
+		(ParamFloat<px4::params::MPC_ISTA_L1_XY>) _param_mpc_ista_l1_xy,
+		(ParamFloat<px4::params::MPC_ISTA_L2_XY>) _param_mpc_ista_l2_xy,
+		(ParamFloat<px4::params::MPC_ISTA_L1_Z>)  _param_mpc_ista_l1_z,
+		(ParamFloat<px4::params::MPC_ISTA_L2_Z>)  _param_mpc_ista_l2_z,
+		(ParamInt<px4::params::MPC_ISTA_KEEP_D>)  _param_mpc_ista_keep_d
 	);
 
 	math::WelfordMean<float> _sample_interval_s{};
@@ -208,6 +216,7 @@ private:
 	hrt_abstime _last_warn{0}; /**< timer when the last warn message was sent out */
 
 	bool _hover_thrust_initialized{false};
+	bool _ista_was_enabled{false};  ///< Track ISTA state for logging
 
 	/** Timeout in us for trajectory data to get considered invalid */
 	static constexpr uint64_t TRAJECTORY_STREAM_TIMEOUT_US = 500_ms;

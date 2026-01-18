@@ -44,6 +44,7 @@
 #include <uORB/topics/trajectory_setpoint.h>
 #include <uORB/topics/vehicle_attitude_setpoint.h>
 #include <uORB/topics/vehicle_local_position_setpoint.h>
+#include "IstaController.hpp"
 
 struct PositionControlStates {
 	matrix::Vector3f position;
@@ -161,8 +162,30 @@ public:
 	 * Set the integral term in xy to 0.
 	 * @see _vel_int
 	 */
-	void resetIntegral() { _vel_int.setZero(); }
-	void resetIntegralXY() { _vel_int.xy() = matrix::Vector2f(); }
+	void resetIntegral() { _vel_int.setZero(); resetIsta(); }
+	void resetIntegralXY() { _vel_int.xy() = matrix::Vector2f(); resetIstaXY(); }
+
+	/**
+	 * Configure ISTA velocity control
+	 * @param enabled true to use ISTA, false to use PID
+	 * @param lambda1_xy ISTA lambda1 gain for XY axes
+	 * @param lambda2_xy ISTA lambda2 gain for XY axes
+	 * @param lambda1_z ISTA lambda1 gain for Z axis
+	 * @param lambda2_z ISTA lambda2 gain for Z axis
+	 * @param keep_d true to keep D-term when using ISTA
+	 */
+	void setIstaParams(bool enabled, float lambda1_xy, float lambda2_xy,
+			   float lambda1_z, float lambda2_z, bool keep_d);
+
+	/**
+	 * Reset ISTA internal states (nu) to zero
+	 */
+	void resetIsta();
+
+	/**
+	 * Reset ISTA internal states for XY axes only
+	 */
+	void resetIstaXY();
 
 	/**
 	 * If set, the tilt setpoint is computed by assuming no vertical acceleration
@@ -233,4 +256,11 @@ private:
 	matrix::Vector3f _thr_sp; /**< desired thrust */
 	float _yaw_sp{}; /**< desired heading */
 	float _yawspeed_sp{}; /** desired yaw-speed */
+
+	// ISTA (Implicit Super-Twisting Algorithm) velocity control
+	bool _ista_enabled{false};       ///< Use ISTA instead of PID for velocity control
+	bool _ista_keep_d{true};         ///< Keep D-term when using ISTA
+	IstaController _ista_x;          ///< ISTA controller for X axis
+	IstaController _ista_y;          ///< ISTA controller for Y axis
+	IstaController _ista_z;          ///< ISTA controller for Z axis
 };
