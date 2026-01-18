@@ -151,12 +151,12 @@ void PositionControl::_velocityControl(const float dt)
 	if (_ista_enabled) {
 		// ISTA velocity control (replaces P+I part of PID)
 		// Each axis runs independently through the implicit super-twisting algorithm
-		// NOTE: ISTA output sign is opposite to PID convention, so we negate it.
-		// ISTA: positive error → negative control (to reduce error)
-		// PID:  positive error → positive control (P * error)
-		acc_sp_velocity(0) = -_ista_x.update(vel_error(0), dt);
-		acc_sp_velocity(1) = -_ista_y.update(vel_error(1), dt);
-		acc_sp_velocity(2) = -_ista_z.update(vel_error(2), dt);
+		// NOTE: We pass negative error to ISTA so that its output matches PID convention.
+		// ISTA drives x→0, so with x=-vel_error, output u will have same sign as vel_error.
+		// This ensures nu accumulates in the correct direction.
+		acc_sp_velocity(0) = _ista_x.update(-vel_error(0), dt);
+		acc_sp_velocity(1) = _ista_y.update(-vel_error(1), dt);
+		acc_sp_velocity(2) = _ista_z.update(-vel_error(2), dt);
 
 		// Optionally keep D-term for additional damping (recommended for first integration)
 		if (_ista_keep_d) {
