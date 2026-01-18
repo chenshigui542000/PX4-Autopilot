@@ -64,7 +64,7 @@ PARAM_DEFINE_INT32(MPC_VEL_ISTA_EN, 0);
  * @increment 0.1
  * @group Multicopter Position Control
  */
-PARAM_DEFINE_FLOAT(MPC_ISTA_L1_XY, 1.5f);
+PARAM_DEFINE_FLOAT(MPC_ISTA_L1_XY, 1.0f);
 
 /**
  * ISTA lambda2 gain for XY velocity
@@ -79,7 +79,7 @@ PARAM_DEFINE_FLOAT(MPC_ISTA_L1_XY, 1.5f);
  * @increment 0.1
  * @group Multicopter Position Control
  */
-PARAM_DEFINE_FLOAT(MPC_ISTA_L2_XY, 1.0f);
+PARAM_DEFINE_FLOAT(MPC_ISTA_L2_XY, 0.5f);
 
 /**
  * ISTA lambda1 gain for Z velocity
@@ -93,7 +93,7 @@ PARAM_DEFINE_FLOAT(MPC_ISTA_L2_XY, 1.0f);
  * @increment 0.1
  * @group Multicopter Position Control
  */
-PARAM_DEFINE_FLOAT(MPC_ISTA_L1_Z, 2.0f);
+PARAM_DEFINE_FLOAT(MPC_ISTA_L1_Z, 1.2f);
 
 /**
  * ISTA lambda2 gain for Z velocity
@@ -107,7 +107,7 @@ PARAM_DEFINE_FLOAT(MPC_ISTA_L1_Z, 2.0f);
  * @increment 0.1
  * @group Multicopter Position Control
  */
-PARAM_DEFINE_FLOAT(MPC_ISTA_L2_Z, 1.5f);
+PARAM_DEFINE_FLOAT(MPC_ISTA_L2_Z, 0.8f);
 
 /**
  * Keep D-term when using ISTA
