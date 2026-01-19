@@ -84,8 +84,13 @@ void PositionControl::updateHoverThrust(const float hover_thrust_new)
 	const float previous_hover_thrust = _hover_thrust;
 	setHoverThrust(hover_thrust_new);
 
-	_vel_int(2) += (_acc_sp(2) - CONSTANTS_ONE_G) * previous_hover_thrust / _hover_thrust
-		       + CONSTANTS_ONE_G - _acc_sp(2);
+	const float delta_acc = (_acc_sp(2) - CONSTANTS_ONE_G) * previous_hover_thrust / _hover_thrust
+				+ CONSTANTS_ONE_G - _acc_sp(2);
+	_vel_int(2) += delta_acc;
+
+	if (_ista_enabled) {
+		_ista_z.adjustNu(delta_acc);
+	}
 }
 
 void PositionControl::setState(const PositionControlStates &states)
@@ -139,22 +144,84 @@ void PositionControl::_positionControl()
 
 void PositionControl::_velocityControl(const float dt)
 {
-	// Constrain vertical velocity integral
-	_vel_int(2) = math::constrain(_vel_int(2), -CONSTANTS_ONE_G, CONSTANTS_ONE_G);
+	// Constrain vertical velocity integral (only used when PID is active)
+	if (!_ista_enabled) {
+		_vel_int(2) = math::constrain(_vel_int(2), -CONSTANTS_ONE_G, CONSTANTS_ONE_G);
+	}
 
-	// PID velocity control
+	// ===== BEGIN VELOCITY CONTROL LAW =====
 	Vector3f vel_error = _vel_sp - _vel;
-	Vector3f acc_sp_velocity = vel_error.emult(_gain_vel_p) + _vel_int - _vel_dot.emult(_gain_vel_d);
+	Vector3f acc_sp_velocity;
+
+	if (_ista_enabled) {
+		// ISTA velocity control (replaces P+I part of PID)
+		// Each axis runs independently through the implicit super-twisting algorithm
+		// NOTE: We pass negative error to ISTA so that its output matches PID convention.
+		// ISTA drives x→0, so with x=-vel_error, output u will have same sign as vel_error.
+		// This ensures nu accumulates in the correct direction.
+		acc_sp_velocity(0) = _ista_x.update(-vel_error(0), dt);
+		acc_sp_velocity(1) = _ista_y.update(-vel_error(1), dt);
+		acc_sp_velocity(2) = _ista_z.update(-vel_error(2), dt);
+
+		// Optionally keep D-term for additional damping (recommended for first integration)
+		if (_ista_keep_d) {
+			acc_sp_velocity -= _vel_dot.emult(_gain_vel_d);
+		}
+
+		// ISTA output limiting (horizontal) based on current tilt limit.
+		const float max_tilt = math::constrain(_lim_tilt, 0.f, math::radians(85.f));
+		const float acc_xy_max = tanf(max_tilt) * CONSTANTS_ONE_G;
+		const Vector2f acc_xy_raw = acc_sp_velocity.xy();
+		const float acc_xy_norm = acc_xy_raw.norm();
+
+		if (PX4_ISFINITE(acc_xy_max) && acc_xy_max > 0.f
+		    && PX4_ISFINITE(acc_xy_norm) && acc_xy_norm > acc_xy_max) {
+			const float scale = acc_xy_max / acc_xy_norm;
+			const Vector2f acc_xy_limited = acc_xy_raw * scale;
+			acc_sp_velocity.xy() = acc_xy_limited;
+
+			// Stronger AW: back-calculate saturation into nu.
+			const Vector2f delta = acc_xy_limited - acc_xy_raw;
+			_ista_x.adjustNu(delta(0));
+			_ista_y.adjustNu(delta(1));
+		}
+
+		// Hover deadband: decay nu and zero tiny XY commands to avoid drift from noise.
+		const Vector2f vel_sp_xy = _vel_sp.xy();
+		const Vector2f vel_error_xy = vel_error.xy();
+		const float hover_db = _ista_hover_vel_deadband;
+
+		if (vel_sp_xy.isAllFinite() && vel_error_xy.isAllFinite()
+		    && (hover_db > 0.f)
+		    && (vel_sp_xy.norm() < hover_db)
+		    && (vel_error_xy.norm() < hover_db)) {
+			if (_ista_hover_nu_tc > 0.f) {
+				const float decay = math::constrain(dt / _ista_hover_nu_tc, 0.f, 1.f);
+				_ista_x.adjustNu(-_ista_x.getNu() * decay);
+				_ista_y.adjustNu(-_ista_y.getNu() * decay);
+			}
+
+			acc_sp_velocity.xy() = Vector2f();
+		}
+
+	} else {
+		// Original PID velocity control
+		acc_sp_velocity = vel_error.emult(_gain_vel_p) + _vel_int - _vel_dot.emult(_gain_vel_d);
+	}
 
 	// No control input from setpoints or corresponding states which are NAN
 	ControlMath::addIfNotNanVector3f(_acc_sp, acc_sp_velocity);
+	// ===== END VELOCITY CONTROL LAW =====
 
 	_accelerationControl();
 
-	// Integrator anti-windup in vertical direction
-	if ((_thr_sp(2) >= -_lim_thr_min && vel_error(2) >= 0.f) ||
-	    (_thr_sp(2) <= -_lim_thr_max && vel_error(2) <= 0.f)) {
-		vel_error(2) = 0.f;
+	// ===== BEGIN ANTI-WINDUP & INTEGRATOR UPDATE =====
+	// Integrator anti-windup in vertical direction (PID only)
+	if (!_ista_enabled) {
+		if ((_thr_sp(2) >= -_lim_thr_min && vel_error(2) >= 0.f) ||
+		    (_thr_sp(2) <= -_lim_thr_max && vel_error(2) <= 0.f)) {
+			vel_error(2) = 0.f;
+		}
 	}
 
 	// Prioritize vertical control while keeping a horizontal margin
@@ -182,23 +249,40 @@ void PositionControl::_velocityControl(const float dt)
 		_thr_sp.xy() = thrust_sp_xy / thrust_sp_xy_norm * thrust_max_xy;
 	}
 
-	// Use tracking Anti-Windup for horizontal direction: during saturation, the integrator is used to unsaturate the output
-	// see Anti-Reset Windup for PID controllers, L.Rundqwist, 1990
-	const Vector2f acc_sp_xy_produced = Vector2f(_thr_sp) * (CONSTANTS_ONE_G / _hover_thrust);
+	// Anti-Windup for horizontal direction
+	// For PID: use tracking ARW (L.Rundqwist, 1990)
+	if (!_ista_enabled) {
+		const Vector2f acc_sp_xy_produced = Vector2f(_thr_sp) * (CONSTANTS_ONE_G / _hover_thrust);
 
-	// The produced acceleration can be greater or smaller than the desired acceleration due to the saturations and the actual vertical thrust (computed independently).
-	// The ARW loop needs to run if the signal is saturated only.
-	if (_acc_sp.xy().norm_squared() > acc_sp_xy_produced.norm_squared()) {
-		const float arw_gain = 2.f / _gain_vel_p(0);
-		const Vector2f acc_sp_xy = _acc_sp.xy();
+		// The produced acceleration can be greater or smaller than the desired acceleration due to the saturations
+		// The ARW loop needs to run if the signal is saturated only.
+		if (_acc_sp.xy().norm_squared() > acc_sp_xy_produced.norm_squared()) {
+			const float arw_gain = 2.f / _gain_vel_p(0);
+			const Vector2f acc_sp_xy = _acc_sp.xy();
 
-		vel_error.xy() = Vector2f(vel_error) - arw_gain * (acc_sp_xy - acc_sp_xy_produced);
+			vel_error.xy() = Vector2f(vel_error) - arw_gain * (acc_sp_xy - acc_sp_xy_produced);
+		}
+
+		// Make sure integral doesn't get NAN
+		ControlMath::setZeroIfNanVector3f(vel_error);
+		// Update integral part of velocity control (PID only)
+		_vel_int += vel_error.emult(_gain_vel_i) * dt;
+	} else {
+		const Vector2f acc_sp_xy_produced = Vector2f(_thr_sp) * (CONSTANTS_ONE_G / _hover_thrust);
+
+		if (_acc_sp.xy().norm_squared() > acc_sp_xy_produced.norm_squared()) {
+			const Vector2f acc_sp_xy = _acc_sp.xy();
+			const Vector2f delta = acc_sp_xy - acc_sp_xy_produced;
+
+			// Feedback saturation error into nu to avoid windup-like behavior.
+			const float arw_gain = (_gain_vel_p(0) > FLT_EPSILON) ? (2.f / _gain_vel_p(0)) : 0.f;
+			const float ista_aw_gain = math::constrain(arw_gain, 0.f, 2.f);
+
+			_ista_x.adjustNu(-delta(0) * ista_aw_gain);
+			_ista_y.adjustNu(-delta(1) * ista_aw_gain);
+		}
 	}
-
-	// Make sure integral doesn't get NAN
-	ControlMath::setZeroIfNanVector3f(vel_error);
-	// Update integral part of velocity control
-	_vel_int += vel_error.emult(_gain_vel_i) * dt;
+	// ===== END ANTI-WINDUP & INTEGRATOR UPDATE =====
 }
 
 void PositionControl::_accelerationControl()
@@ -267,4 +351,31 @@ void PositionControl::getAttitudeSetpoint(vehicle_attitude_setpoint_s &attitude_
 {
 	ControlMath::thrustToAttitude(_thr_sp, _yaw_sp, attitude_setpoint);
 	attitude_setpoint.yaw_sp_move_rate = _yawspeed_sp;
+}
+
+void PositionControl::setIstaParams(bool enabled, float lambda1_xy, float lambda2_xy,
+				    float lambda1_z, float lambda2_z, bool keep_d,
+				    float hover_vel_db, float hover_nu_tc)
+{
+	_ista_enabled = enabled;
+	_ista_keep_d = keep_d;
+	_ista_hover_vel_deadband = math::max(hover_vel_db, 0.f);
+	_ista_hover_nu_tc = math::max(hover_nu_tc, 0.f);
+
+	_ista_x.setGains(lambda1_xy, lambda2_xy);
+	_ista_y.setGains(lambda1_xy, lambda2_xy);
+	_ista_z.setGains(lambda1_z, lambda2_z);
+}
+
+void PositionControl::resetIsta()
+{
+	_ista_x.reset();
+	_ista_y.reset();
+	_ista_z.reset();
+}
+
+void PositionControl::resetIstaXY()
+{
+	_ista_x.reset();
+	_ista_y.reset();
 }
