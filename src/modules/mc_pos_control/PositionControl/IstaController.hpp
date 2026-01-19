@@ -101,6 +101,13 @@ public:
 	 */
 	float getLambda2() const { return _lambda2; }
 
+	/**
+	 * @brief Adjust internal state (nu) by a delta
+	 *
+	 * Useful for compensating hover thrust updates.
+	 */
+	void adjustNu(float delta);
+
 private:
 	float _lambda1{1.0f};   ///< ISTA gain lambda1 (proportional-like)
 	float _lambda2{1.0f};   ///< ISTA gain lambda2 (integral-like)

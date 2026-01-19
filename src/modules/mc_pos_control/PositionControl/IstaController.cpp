@@ -44,15 +44,9 @@
 float IstaController::update(float x, float h)
 {
 	// Safety: NaN input check
-	if (!PX4_ISFINITE(x) || !PX4_ISFINITE(h)) {
+	if (!PX4_ISFINITE(x) || !PX4_ISFINITE(h) || h <= 0.0f) {
 		_last_case = 0;
-		return _nu;  // Return current nu as fallback
-	}
-
-	// Safety: require positive time step
-	if (h <= 0.0f) {
-		_last_case = 0;
-		return _nu;  // Return current nu as fallback (no update)
+		return NAN;
 	}
 
 	// Ensure gains are positive (defensive)
@@ -120,23 +114,10 @@ float IstaController::update(float x, float h)
 
 		// Control: u_k = nu_{k+1} = -x_{1,k} / h
 		// This also updates nu implicitly
-		// NOTE: This can produce very large values when h is small,
-		// so we apply output limiting below
+		// NOTE: This can produce very large values when h is small.
 		u = -x / h;
 		_nu = u;
 	}
-
-	// ===== Output limiting =====
-	// Limit acceleration output to reasonable bounds (approx 2g for safety)
-	// This prevents extreme control actions during transients
-	constexpr float ACC_LIMIT = 20.0f;  // m/s^2 (approx 2g)
-
-	u = math::constrain(u, -ACC_LIMIT, ACC_LIMIT);
-
-	// Limit nu accumulation to prevent windup
-	// Nu represents the integral-like term, limit to ~1g
-	constexpr float NU_LIMIT = 15.0f;  // m/s^2
-	_nu = math::constrain(_nu, -NU_LIMIT, NU_LIMIT);
 
 	// Final NaN safety check on output
 	if (!PX4_ISFINITE(u)) {
@@ -162,4 +143,17 @@ void IstaController::reset()
 {
 	_nu = 0.0f;
 	_last_case = 0;
+}
+
+void IstaController::adjustNu(float delta)
+{
+	if (!PX4_ISFINITE(delta)) {
+		return;
+	}
+
+	_nu += delta;
+
+	if (!PX4_ISFINITE(_nu)) {
+		_nu = 0.0f;
+	}
 }

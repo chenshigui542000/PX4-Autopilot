@@ -84,8 +84,13 @@ void PositionControl::updateHoverThrust(const float hover_thrust_new)
 	const float previous_hover_thrust = _hover_thrust;
 	setHoverThrust(hover_thrust_new);
 
-	_vel_int(2) += (_acc_sp(2) - CONSTANTS_ONE_G) * previous_hover_thrust / _hover_thrust
-		       + CONSTANTS_ONE_G - _acc_sp(2);
+	const float delta_acc = (_acc_sp(2) - CONSTANTS_ONE_G) * previous_hover_thrust / _hover_thrust
+				+ CONSTANTS_ONE_G - _acc_sp(2);
+	_vel_int(2) += delta_acc;
+
+	if (_ista_enabled) {
+		_ista_z.adjustNu(delta_acc);
+	}
 }
 
 void PositionControl::setState(const PositionControlStates &states)
