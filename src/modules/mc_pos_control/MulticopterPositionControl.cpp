@@ -208,7 +208,9 @@ void MulticopterPositionControl::parameters_update(bool force)
 			_param_mpc_ista_l2_xy.get(),
 			_param_mpc_ista_l1_z.get(),
 			_param_mpc_ista_l2_z.get(),
-			_param_mpc_ista_keep_d.get() > 0);
+			_param_mpc_ista_keep_d.get() > 0,
+			_param_mpc_ista_hov_db.get(),
+			_param_mpc_ista_hov_tc.get());
 
 		// Log ISTA state change
 		const bool ista_enabled = _param_mpc_vel_ista_en.get() > 0;

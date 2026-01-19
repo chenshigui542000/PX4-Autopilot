@@ -119,3 +119,31 @@ PARAM_DEFINE_FLOAT(MPC_ISTA_L2_Z, 0.8f);
  * @group Multicopter Position Control
  */
 PARAM_DEFINE_INT32(MPC_ISTA_KEEP_D, 1);
+
+/**
+ * ISTA hover deadband for XY velocity
+ *
+ * If both velocity setpoint and velocity error are below this value,
+ * XY ISTA output is zeroed and nu decays to prevent drift.
+ *
+ * @min 0.0
+ * @max 1.0
+ * @decimal 2
+ * @increment 0.01
+ * @group Multicopter Position Control
+ */
+PARAM_DEFINE_FLOAT(MPC_ISTA_HOV_DB, 0.05f);
+
+/**
+ * ISTA hover nu decay time constant
+ *
+ * Time constant (seconds) used to decay nu in hover deadband.
+ * Set to 0 to disable decay.
+ *
+ * @min 0.0
+ * @max 5.0
+ * @decimal 2
+ * @increment 0.05
+ * @group Multicopter Position Control
+ */
+PARAM_DEFINE_FLOAT(MPC_ISTA_HOV_TC, 0.5f);

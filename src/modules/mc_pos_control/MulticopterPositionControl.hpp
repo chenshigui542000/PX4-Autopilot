@@ -196,7 +196,9 @@ private:
 		(ParamFloat<px4::params::MPC_ISTA_L2_XY>) _param_mpc_ista_l2_xy,
 		(ParamFloat<px4::params::MPC_ISTA_L1_Z>)  _param_mpc_ista_l1_z,
 		(ParamFloat<px4::params::MPC_ISTA_L2_Z>)  _param_mpc_ista_l2_z,
-		(ParamInt<px4::params::MPC_ISTA_KEEP_D>)  _param_mpc_ista_keep_d
+		(ParamInt<px4::params::MPC_ISTA_KEEP_D>)  _param_mpc_ista_keep_d,
+		(ParamFloat<px4::params::MPC_ISTA_HOV_DB>) _param_mpc_ista_hov_db,
+		(ParamFloat<px4::params::MPC_ISTA_HOV_TC>) _param_mpc_ista_hov_tc
 	);
 
 	math::WelfordMean<float> _sample_interval_s{};

@@ -189,15 +189,18 @@ void PositionControl::_velocityControl(const float dt)
 		// Hover deadband: decay nu and zero tiny XY commands to avoid drift from noise.
 		const Vector2f vel_sp_xy = _vel_sp.xy();
 		const Vector2f vel_error_xy = vel_error.xy();
-		constexpr float ISTA_VEL_SP_DEADBAND = 0.05f;  // m/s
-		constexpr float ISTA_VEL_ERR_DEADBAND = 0.05f; // m/s
+		const float hover_db = _ista_hover_vel_deadband;
 
 		if (vel_sp_xy.isAllFinite() && vel_error_xy.isAllFinite()
-		    && (vel_sp_xy.norm() < ISTA_VEL_SP_DEADBAND)
-		    && (vel_error_xy.norm() < ISTA_VEL_ERR_DEADBAND)) {
-			const float decay = math::constrain(dt * 2.f, 0.f, 1.f);
-			_ista_x.adjustNu(-_ista_x.getNu() * decay);
-			_ista_y.adjustNu(-_ista_y.getNu() * decay);
+		    && (hover_db > 0.f)
+		    && (vel_sp_xy.norm() < hover_db)
+		    && (vel_error_xy.norm() < hover_db)) {
+			if (_ista_hover_nu_tc > 0.f) {
+				const float decay = math::constrain(dt / _ista_hover_nu_tc, 0.f, 1.f);
+				_ista_x.adjustNu(-_ista_x.getNu() * decay);
+				_ista_y.adjustNu(-_ista_y.getNu() * decay);
+			}
+
 			acc_sp_velocity.xy() = Vector2f();
 		}
 
@@ -351,10 +354,13 @@ void PositionControl::getAttitudeSetpoint(vehicle_attitude_setpoint_s &attitude_
 }
 
 void PositionControl::setIstaParams(bool enabled, float lambda1_xy, float lambda2_xy,
-				    float lambda1_z, float lambda2_z, bool keep_d)
+				    float lambda1_z, float lambda2_z, bool keep_d,
+				    float hover_vel_db, float hover_nu_tc)
 {
 	_ista_enabled = enabled;
 	_ista_keep_d = keep_d;
+	_ista_hover_vel_deadband = math::max(hover_vel_db, 0.f);
+	_ista_hover_nu_tc = math::max(hover_nu_tc, 0.f);
 
 	_ista_x.setGains(lambda1_xy, lambda2_xy);
 	_ista_y.setGains(lambda1_xy, lambda2_xy);
