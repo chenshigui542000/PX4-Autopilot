@@ -186,6 +186,21 @@ void PositionControl::_velocityControl(const float dt)
 			_ista_y.adjustNu(delta(1));
 		}
 
+		// Hover deadband: decay nu and zero tiny XY commands to avoid drift from noise.
+		const Vector2f vel_sp_xy = _vel_sp.xy();
+		const Vector2f vel_error_xy = vel_error.xy();
+		constexpr float ISTA_VEL_SP_DEADBAND = 0.05f;  // m/s
+		constexpr float ISTA_VEL_ERR_DEADBAND = 0.05f; // m/s
+
+		if (vel_sp_xy.isAllFinite() && vel_error_xy.isAllFinite()
+		    && (vel_sp_xy.norm() < ISTA_VEL_SP_DEADBAND)
+		    && (vel_error_xy.norm() < ISTA_VEL_ERR_DEADBAND)) {
+			const float decay = math::constrain(dt * 2.f, 0.f, 1.f);
+			_ista_x.adjustNu(-_ista_x.getNu() * decay);
+			_ista_y.adjustNu(-_ista_y.getNu() * decay);
+			acc_sp_velocity.xy() = Vector2f();
+		}
+
 	} else {
 		// Original PID velocity control
 		acc_sp_velocity = vel_error.emult(_gain_vel_p) + _vel_int - _vel_dot.emult(_gain_vel_d);
