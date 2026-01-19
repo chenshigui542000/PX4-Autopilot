@@ -215,7 +215,6 @@ void PositionControl::_velocityControl(const float dt)
 
 	// Anti-Windup for horizontal direction
 	// For PID: use tracking ARW (L.Rundqwist, 1990)
-	// For ISTA: TODO - ARW feedback to nu is not implemented yet; ISTA has inherent robustness
 	if (!_ista_enabled) {
 		const Vector2f acc_sp_xy_produced = Vector2f(_thr_sp) * (CONSTANTS_ONE_G / _hover_thrust);
 
@@ -232,6 +231,17 @@ void PositionControl::_velocityControl(const float dt)
 		ControlMath::setZeroIfNanVector3f(vel_error);
 		// Update integral part of velocity control (PID only)
 		_vel_int += vel_error.emult(_gain_vel_i) * dt;
+	} else {
+		const Vector2f acc_sp_xy_produced = Vector2f(_thr_sp) * (CONSTANTS_ONE_G / _hover_thrust);
+
+		if (_acc_sp.xy().norm_squared() > acc_sp_xy_produced.norm_squared()) {
+			const Vector2f acc_sp_xy = _acc_sp.xy();
+			const Vector2f delta = acc_sp_xy - acc_sp_xy_produced;
+
+			// Feedback saturation error into nu to avoid windup-like behavior.
+			_ista_x.adjustNu(-delta(0));
+			_ista_y.adjustNu(-delta(1));
+		}
 	}
 	// ===== END ANTI-WINDUP & INTEGRATOR UPDATE =====
 }
