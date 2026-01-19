@@ -217,6 +217,7 @@ private:
 
 	bool _hover_thrust_initialized{false};
 	bool _ista_was_enabled{false};  ///< Track ISTA state for logging
+	TakeoffState _last_takeoff_state{TakeoffState::disarmed};
 
 	/** Timeout in us for trajectory data to get considered invalid */
 	static constexpr uint64_t TRAJECTORY_STREAM_TIMEOUT_US = 500_ms;

@@ -519,8 +519,15 @@ void MulticopterPositionControl::Run()
 						    _vehicle_constraints.want_takeoff,
 						    _vehicle_constraints.speed_up, skip_takeoff, vehicle_local_position.timestamp_sample);
 
-			const bool not_taken_off             = (_takeoff.getTakeoffState() < TakeoffState::rampup);
-			const bool flying                    = (_takeoff.getTakeoffState() >= TakeoffState::flight);
+			const TakeoffState takeoff_state = _takeoff.getTakeoffState();
+			if ((_param_mpc_vel_ista_en.get() > 0) && (takeoff_state == TakeoffState::flight)
+			    && (_last_takeoff_state != TakeoffState::flight)) {
+				_control.resetIstaXY();
+			}
+			_last_takeoff_state = takeoff_state;
+
+			const bool not_taken_off             = (takeoff_state < TakeoffState::rampup);
+			const bool flying                    = (takeoff_state >= TakeoffState::flight);
 			const bool flying_but_ground_contact = (flying && _vehicle_land_detected.ground_contact);
 
 			if (!flying) {
@@ -528,7 +535,7 @@ void MulticopterPositionControl::Run()
 			}
 
 			// make sure takeoff ramp is not amended by acceleration feed-forward
-			if (_takeoff.getTakeoffState() == TakeoffState::rampup && PX4_ISFINITE(_setpoint.velocity[2])) {
+			if (takeoff_state == TakeoffState::rampup && PX4_ISFINITE(_setpoint.velocity[2])) {
 				_setpoint.acceleration[2] = NAN;
 			}
 
@@ -543,7 +550,7 @@ void MulticopterPositionControl::Run()
 			}
 
 			// limit tilt during takeoff ramupup
-			const float tilt_limit_deg = (_takeoff.getTakeoffState() < TakeoffState::flight)
+			const float tilt_limit_deg = (takeoff_state < TakeoffState::flight)
 						     ? _param_mpc_tiltmax_lnd.get() : _param_mpc_tiltmax_air.get();
 			_control.setTiltLimit(_tilt_limit_slew_rate.update(math::radians(tilt_limit_deg), dt));
 
