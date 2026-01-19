@@ -168,6 +168,24 @@ void PositionControl::_velocityControl(const float dt)
 			acc_sp_velocity -= _vel_dot.emult(_gain_vel_d);
 		}
 
+		// ISTA output limiting (horizontal) based on current tilt limit.
+		const float max_tilt = math::constrain(_lim_tilt, 0.f, math::radians(85.f));
+		const float acc_xy_max = tanf(max_tilt) * CONSTANTS_ONE_G;
+		const Vector2f acc_xy_raw = acc_sp_velocity.xy();
+		const float acc_xy_norm = acc_xy_raw.norm();
+
+		if (PX4_ISFINITE(acc_xy_max) && acc_xy_max > 0.f
+		    && PX4_ISFINITE(acc_xy_norm) && acc_xy_norm > acc_xy_max) {
+			const float scale = acc_xy_max / acc_xy_norm;
+			const Vector2f acc_xy_limited = acc_xy_raw * scale;
+			acc_sp_velocity.xy() = acc_xy_limited;
+
+			// Stronger AW: back-calculate saturation into nu.
+			const Vector2f delta = acc_xy_limited - acc_xy_raw;
+			_ista_x.adjustNu(delta(0));
+			_ista_y.adjustNu(delta(1));
+		}
+
 	} else {
 		// Original PID velocity control
 		acc_sp_velocity = vel_error.emult(_gain_vel_p) + _vel_int - _vel_dot.emult(_gain_vel_d);
@@ -240,7 +258,7 @@ void PositionControl::_velocityControl(const float dt)
 
 			// Feedback saturation error into nu to avoid windup-like behavior.
 			const float arw_gain = (_gain_vel_p(0) > FLT_EPSILON) ? (2.f / _gain_vel_p(0)) : 0.f;
-			const float ista_aw_gain = math::constrain(_gain_vel_i(0) * dt * arw_gain, 0.f, 1.f);
+			const float ista_aw_gain = math::constrain(arw_gain, 0.f, 2.f);
 
 			_ista_x.adjustNu(-delta(0) * ista_aw_gain);
 			_ista_y.adjustNu(-delta(1) * ista_aw_gain);
