@@ -87,8 +87,10 @@ void PositionControl::updateHoverThrust(const float hover_thrust_new)
 	_vel_int(2) += (_acc_sp(2) - CONSTANTS_ONE_G) * previous_hover_thrust / _hover_thrust
 		       + CONSTANTS_ONE_G - _acc_sp(2);
 
-	_pos_sta_control.lessPosStaW((_acc_sp(2) - CONSTANTS_ONE_G) * previous_hover_thrust / _hover_thrust
-			+ CONSTANTS_ONE_G - _acc_sp(2));
+	if (_sta_vel_enabled) {
+		_pos_sta_control.lessPosStaW((_acc_sp(2) - CONSTANTS_ONE_G) * previous_hover_thrust / _hover_thrust
+				+ CONSTANTS_ONE_G - _acc_sp(2));
+	}
 }
 
 void PositionControl::setState(const PositionControlStates &states)
@@ -115,7 +117,9 @@ bool PositionControl::update(const float dt)
 	bool valid = _inputValid();
 
 	if (valid) {
-		_pos_sta_control.update(dt, _pos, _pos_sp, _vel, _vel_sp, _vel_dot);
+		if (_sta_vel_enabled) {
+			_pos_sta_control.update(dt, _pos, _pos_sp, _vel, _vel_sp, _vel_dot);
+		}
 		_positionControl();
 		_velocityControl(dt);
 
@@ -152,9 +156,10 @@ void PositionControl::_velocityControl(const float dt)
 	// PID velocity control
 	Vector3f vel_error = _vel_sp - _vel;
 
-	//modify vel error
-	vel_error(0) = _pos_sta_control.getVelErrorDivNorm(vel_error(0), 0);
-	vel_error(1) = _pos_sta_control.getVelErrorDivNorm(vel_error(1), 1);
+	if (_sta_vel_enabled) {
+		vel_error(0) = _pos_sta_control.getVelErrorDivNorm(vel_error(0), 0);
+		vel_error(1) = _pos_sta_control.getVelErrorDivNorm(vel_error(1), 1);
+	}
 
 
 	Vector3f acc_sp_velocity = vel_error.emult(_gain_vel_p) + _vel_int - _vel_dot.emult(_gain_vel_d);
@@ -171,7 +176,9 @@ void PositionControl::_velocityControl(const float dt)
 		vel_error(2) = 0.f;
 	}
 
-	_pos_sta_control.updateIntW(_thr_sp(2), _lim_thr_min, _lim_thr_max, dt);
+	if (_sta_vel_enabled) {
+		_pos_sta_control.updateIntW(_thr_sp(2), _lim_thr_min, _lim_thr_max, dt);
+	}
 
 	// Prioritize vertical control while keeping a horizontal margin
 	const Vector2f thrust_sp_xy(_thr_sp);
@@ -284,4 +291,3 @@ void PositionControl::getAttitudeSetpoint(vehicle_attitude_setpoint_s &attitude_
 	ControlMath::thrustToAttitude(_thr_sp, _yaw_sp, attitude_setpoint);
 	attitude_setpoint.yaw_sp_move_rate = _yawspeed_sp;
 }
-

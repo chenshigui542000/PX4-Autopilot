@@ -92,7 +92,9 @@ Vector3f RateControl::update(const Vector3f &rate, const Vector3f &rate_sp, cons
 		updateIntegral(rate_error, dt);
 	}
 
-	torque = _att_sta_control.getStaTorque();
+	if (_sta_enabled) {
+		torque = _att_sta_control.getStaTorque();
+	}
 
 	return torque;
 }
@@ -134,9 +136,14 @@ void RateControl::getRateControlStatus(rate_ctrl_status_s &rate_ctrl_status)
 	// rate_ctrl_status.rollspeed_integ = _rate_int(0);
 	// rate_ctrl_status.pitchspeed_integ = _rate_int(1);
 	// rate_ctrl_status.yawspeed_integ = _rate_int(2);
-	matrix::Vector3f att_sta_w = _att_sta_control.getStaW();
-
-	rate_ctrl_status.rollspeed_integ = att_sta_w(0);
-	rate_ctrl_status.pitchspeed_integ = att_sta_w(1);
-	rate_ctrl_status.yawspeed_integ = att_sta_w(2);
+	if (_sta_enabled) {
+		matrix::Vector3f att_sta_w = _att_sta_control.getStaW();
+		rate_ctrl_status.rollspeed_integ = att_sta_w(0);
+		rate_ctrl_status.pitchspeed_integ = att_sta_w(1);
+		rate_ctrl_status.yawspeed_integ = att_sta_w(2);
+	} else {
+		rate_ctrl_status.rollspeed_integ = _rate_int(0);
+		rate_ctrl_status.pitchspeed_integ = _rate_int(1);
+		rate_ctrl_status.yawspeed_integ = _rate_int(2);
+	}
 }

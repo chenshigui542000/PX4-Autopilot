@@ -307,6 +307,16 @@ PARAM_DEFINE_INT32(MC_BAT_SCALE_EN, 0);
  */
 PARAM_DEFINE_FLOAT(MC_YAW_TQ_CUTOFF, 2.f);
 
+/**
+ * Enable STA rate control
+ *
+ * Enable STA-based rate control.
+ *
+ * @boolean
+ * @group Multicopter Rate Control
+ */
+PARAM_DEFINE_INT32(MC_RATE_STA_EN, 0);
+
 //super twisting c
 PARAM_DEFINE_FLOAT(ATT_STA_R_C, 0.f);
 PARAM_DEFINE_FLOAT(ATT_STA_P_C, 0.f);

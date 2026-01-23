@@ -83,6 +83,8 @@ void MulticopterPositionControl::parameters_update(bool force)
 
 		float sample_freq_hz = 1.f / _sample_interval_s.mean();
 
+		_control.setStaEnabled(_param_mpc_vel_sta_en.get() != 0);
+
 		// _control._set_sta_param(_param_sta_sliding_c.get(), _param_sta_z_error_up.get(), _param_sta_ita_norm_up.get());
 
 		_control._pos_sta_control.setPosStaParams(_param_pos_sta_mass.get(), _param_pos_sta_c.get(),

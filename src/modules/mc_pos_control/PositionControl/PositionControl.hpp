@@ -171,6 +171,16 @@ public:
 	void resetIntegral() { _vel_int.setZero(); _pos_sta_control.resetPosStaW();}
 	void resetIntegralXY() { _vel_int.xy() = matrix::Vector2f(); }
 
+	void setStaEnabled(bool enabled)
+	{
+		if (_sta_vel_enabled != enabled) {
+			_sta_vel_enabled = enabled;
+			_pos_sta_control.reset();
+		}
+	}
+
+	bool isStaEnabled() const { return _sta_vel_enabled; }
+
 	/**
 	 * If set, the tilt setpoint is computed by assuming no vertical acceleration
 	 */
@@ -228,6 +238,7 @@ private:
 
 	float _hover_thrust{}; ///< Thrust [HOVER_THRUST_MIN, HOVER_THRUST_MAX] with which the vehicle hovers not accelerating down or up with level orientation
 	bool _decouple_horizontal_and_vertical_acceleration{true}; ///< Ignore vertical acceleration setpoint to remove its effect on the tilt setpoint
+	bool _sta_vel_enabled{false};
 
 	// States
 	matrix::Vector3f _pos; /**< current position */

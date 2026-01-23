@@ -107,6 +107,18 @@ public:
 	 */
 	void resetIntegral() { _rate_int.zero(); _att_sta_control.resetIntW();}
 
+	void setStaEnabled(bool enabled)
+	{
+		if (_sta_enabled != enabled) {
+			_sta_enabled = enabled;
+			if (!enabled) {
+				_att_sta_control.reset();
+			}
+		}
+	}
+
+	bool isStaEnabled() const { return _sta_enabled; }
+
 	/**
 	 * Set the integral term to 0 for specific axes
 	 * @param  axis roll 0 / pitch 1 / yaw 2
@@ -138,6 +150,7 @@ private:
 
 	// States
 	matrix::Vector3f _rate_int; ///< integral term of the rate controller
+	bool _sta_enabled{false};
 
 	// Feedback from control allocation
 	matrix::Vector<bool, 3> _control_allocator_saturation_negative;

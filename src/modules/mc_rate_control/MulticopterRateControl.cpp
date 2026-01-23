@@ -98,6 +98,8 @@ MulticopterRateControl::parameters_updated()
 
 	_output_lpf_yaw.setCutoffFreq(_param_mc_yaw_tq_cutoff.get());
 
+	_rate_control.setStaEnabled(_param_mc_rate_sta_en.get() != 0);
+
 	_rate_control._att_sta_control.setStaParams(
 		Vector3f(_param_att_sta_r_c.get(), _param_att_sta_p_c.get(),_param_att_sta_y_c.get()),
 		Vector3f(_param_att_sta_r_al.get(), _param_att_sta_p_al.get(),_param_att_sta_y_al.get()),
@@ -234,18 +236,16 @@ MulticopterRateControl::Run()
 				_rate_control.setSaturationStatus(saturation_positive, saturation_negative);
 			}
 
-			//update attitude error
-			attitude_error_s attitude_error;
-			if(_attitude_error_sub.update(&attitude_error)){
-				// std::cout <<"attitude_error update success"<< std::endl;
-				// std::cout <<"roll error : "  << attitude_error.roll_error << std::endl;
-				// std::cout <<"pitch error : " << attitude_error.pitch_error << std::endl;
-				// std::cout <<"yaw error : " << attitude_error.yaw_error << std::endl;
+			if (_rate_control.isStaEnabled()) {
+				attitude_error_s attitude_error;
+				if (_attitude_error_sub.update(&attitude_error)) {
+					// use latest attitude error
+				}
+
+				Vector3f attitude_error_ve3{attitude_error.roll_error, attitude_error.pitch_error, attitude_error.yaw_error};
+
+				_rate_control._att_sta_control.update(attitude_error_ve3, rates, _rates_setpoint, angular_accel, dt, _maybe_landed || _landed);
 			}
-
-			Vector3f attitude_error_ve3{attitude_error.roll_error, attitude_error.pitch_error, attitude_error.yaw_error};
-
-			_rate_control._att_sta_control.update(attitude_error_ve3, rates, _rates_setpoint, angular_accel, dt, _maybe_landed || _landed);
 
 
 			// run rate controller
@@ -270,13 +270,12 @@ MulticopterRateControl::Run()
 			vehicle_torque_setpoint.xyz[1] = PX4_ISFINITE(torque_setpoint(1)) ? torque_setpoint(1) : 0.f;
 			vehicle_torque_setpoint.xyz[2] = PX4_ISFINITE(torque_setpoint(2)) ? torque_setpoint(2) : 0.f;
 
-			//publish att sta status
-
-			attitude_sta_status_s att_sta_status;
-			_rate_control._att_sta_control.getAttStaStatus(att_sta_status);
-
-			att_sta_status.timestamp = hrt_absolute_time();
-			_attitude_sta_status_pub.publish(att_sta_status);
+			if (_rate_control.isStaEnabled()) {
+				attitude_sta_status_s att_sta_status;
+				_rate_control._att_sta_control.getAttStaStatus(att_sta_status);
+				att_sta_status.timestamp = hrt_absolute_time();
+				_attitude_sta_status_pub.publish(att_sta_status);
+			}
 			// scale setpoints by battery status if enabled
 			if (_param_mc_bat_scale_en.get()) {
 				if (_battery_status_sub.updated()) {

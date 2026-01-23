@@ -22,6 +22,14 @@ public:
 
 	void resetIntW() {_att_sta_w.zero();}
 
+	void reset()
+	{
+		_att_ita.zero();
+		_att_torque.zero();
+		_att_sta_w.zero();
+		_att_sta_w_dot.zero();
+	}
+
 	void resetIntW(size_t axis)
 	{
 		if(axis < 3){
