@@ -1,62 +1,85 @@
-# PX4 Drone Autopilot
-
-[![Releases](https://img.shields.io/github/release/PX4/PX4-Autopilot.svg)](https://github.com/PX4/PX4-Autopilot/releases) [![DOI](https://zenodo.org/badge/22634/PX4/PX4-Autopilot.svg)](https://zenodo.org/badge/latestdoi/22634/PX4/PX4-Autopilot)
-
-[![Build Targets](https://github.com/PX4/PX4-Autopilot/actions/workflows/build_all_targets.yml/badge.svg?branch=main)](https://github.com/PX4/PX4-Autopilot/actions/workflows/build_all_targets.yml) [![SITL Tests](https://github.com/PX4/PX4-Autopilot/workflows/SITL%20Tests/badge.svg?branch=master)](https://github.com/PX4/PX4-Autopilot/actions?query=workflow%3A%22SITL+Tests%22)
-
-[![Discord Shield](https://discordapp.com/api/guilds/1022170275984457759/widget.png?style=shield)](https://discord.gg/dronecode)
-
-This repository holds the [PX4](http://px4.io) flight control solution for drones, with the main applications located in the [src/modules](https://github.com/PX4/PX4-Autopilot/tree/main/src/modules) directory. It also contains the PX4 Drone Middleware Platform, which provides drivers and middleware to run drones.
-
-PX4 is highly portable, OS-independent and supports Linux, NuttX and MacOS out of the box.
-
-* Official Website: http://px4.io (License: BSD 3-clause, [LICENSE](https://github.com/PX4/PX4-Autopilot/blob/main/LICENSE))
-* [Supported airframes](https://docs.px4.io/main/en/airframes/airframe_reference.html) ([portfolio](https://px4.io/ecosystem/commercial-systems/)):
-  * [Multicopters](https://docs.px4.io/main/en/frames_multicopter/)
-  * [Fixed wing](https://docs.px4.io/main/en/frames_plane/)
-  * [VTOL](https://docs.px4.io/main/en/frames_vtol/)
-  * [Autogyro](https://docs.px4.io/main/en/frames_autogyro/)
-  * [Rover](https://docs.px4.io/main/en/frames_rover/)
-  * many more experimental types (Blimps, Boats, Submarines, High Altitude Balloons, Spacecraft, etc)
-* Releases: [Downloads](https://github.com/PX4/PX4-Autopilot/releases)
-
-## Releases
-
-Release notes and supporting information for PX4 releases can be found on the [Developer Guide](https://docs.px4.io/main/en/releases/).
-
-## Building a PX4 based drone, rover, boat or robot
-
-The [PX4 User Guide](https://docs.px4.io/main/en/) explains how to assemble [supported vehicles](https://docs.px4.io/main/en/airframes/airframe_reference.html) and fly drones with PX4. See the [forum and chat](https://docs.px4.io/main/en/#getting-help) if you need help!
 
 
-## Changing Code and Contributing
+## SuperTwisting2.0 Control Changes
 
-This [Developer Guide](https://docs.px4.io/main/en/development/development.html) is for software developers who want to modify the flight stack and middleware (e.g. to add new flight modes), hardware integrators who want to support new flight controller boards and peripherals, and anyone who wants to get PX4 working on a new (unsupported) airframe/vehicle.
+### Affected Control Loops
 
-Developers should read the [Guide for Contributions](https://docs.px4.io/main/en/contribute/).
-See the [forum and chat](https://docs.px4.io/main/en/#getting-help) if you need help!
+- Attitude rate loop (mc_rate_control / RateControl): adds AttitudeStaControl, and the STA torque output overrides the PID torque output; the attitude controller publishes `attitude_error` for STA.
+- Position/velocity loop (mc_pos_control / PositionControl): adds PositionStaControl and applies STA-style normalization on XY velocity error; Z-axis STA terms are logged but do not directly replace thrust output.
 
+### Modified/Added Files
 
-## Weekly Dev Call
+| File | Change |
+| --- | --- |
+| [msg/AttitudeAllStatus.msg](msg/AttitudeAllStatus.msg) | New - attitude and setpoint status |
+| [msg/AttitudeError.msg](msg/AttitudeError.msg) | New - attitude error |
+| [msg/AttitudeStaStatus.msg](msg/AttitudeStaStatus.msg) | New - attitude STA status |
+| [msg/PositionStaStatus.msg](msg/PositionStaStatus.msg) | New - position STA status |
+| [msg/StaStatus.msg](msg/StaStatus.msg) | New - STA debug status |
+| [msg/CMakeLists.txt](msg/CMakeLists.txt) | Modified - add STA-related messages |
+| [src/lib/rate_control/attitude_sta_control.hpp](src/lib/rate_control/attitude_sta_control.hpp) | New - attitude STA controller interface |
+| [src/lib/rate_control/attitude_sta_control.cpp](src/lib/rate_control/attitude_sta_control.cpp) | New - attitude STA controller implementation |
+| [src/lib/rate_control/rate_control.hpp](src/lib/rate_control/rate_control.hpp) | Modified - integrate STA controller |
+| [src/lib/rate_control/rate_control.cpp](src/lib/rate_control/rate_control.cpp) | Modified - STA torque output |
+| [src/lib/rate_control/CMakeLists.txt](src/lib/rate_control/CMakeLists.txt) | Modified - add STA sources |
+| [src/modules/mc_att_control/AttitudeControl/AttitudeControl.hpp](src/modules/mc_att_control/AttitudeControl/AttitudeControl.hpp) | Modified - expose attitude_error |
+| [src/modules/mc_att_control/AttitudeControl/AttitudeControl.cpp](src/modules/mc_att_control/AttitudeControl/AttitudeControl.cpp) | Modified - compute/cache attitude_error |
+| [src/modules/mc_att_control/mc_att_control_main.cpp](src/modules/mc_att_control/mc_att_control_main.cpp) | Modified - publish attitude_error/attitude_all_status |
+| [src/modules/mc_rate_control/MulticopterRateControl.hpp](src/modules/mc_rate_control/MulticopterRateControl.hpp) | Modified - STA parameter bindings |
+| [src/modules/mc_rate_control/MulticopterRateControl.cpp](src/modules/mc_rate_control/MulticopterRateControl.cpp) | Modified - STA parameter update and status publish |
+| [src/modules/mc_rate_control/mc_rate_control_params.c](src/modules/mc_rate_control/mc_rate_control_params.c) | Modified - add ATT_STA_* parameters |
+| [src/modules/mc_pos_control/PositionControl/PositionStaControl.hpp](src/modules/mc_pos_control/PositionControl/PositionStaControl.hpp) | New - position STA controller interface |
+| [src/modules/mc_pos_control/PositionControl/PositionStaControl.cpp](src/modules/mc_pos_control/PositionControl/PositionStaControl.cpp) | New - position STA controller implementation |
+| [src/modules/mc_pos_control/PositionControl/SuperTwisting.hpp](src/modules/mc_pos_control/PositionControl/SuperTwisting.hpp) | New - SuperTwisting debug controller |
+| [src/modules/mc_pos_control/PositionControl/SuperTwisting.cpp](src/modules/mc_pos_control/PositionControl/SuperTwisting.cpp) | New - SuperTwisting implementation |
+| [src/modules/mc_pos_control/PositionControl/PositionControl.hpp](src/modules/mc_pos_control/PositionControl/PositionControl.hpp) | Modified - integrate PositionStaControl |
+| [src/modules/mc_pos_control/PositionControl/PositionControl.cpp](src/modules/mc_pos_control/PositionControl/PositionControl.cpp) | Modified - XY velocity error normalization |
+| [src/modules/mc_pos_control/PositionControl/CMakeLists.txt](src/modules/mc_pos_control/PositionControl/CMakeLists.txt) | Modified - add STA sources |
+| [src/modules/mc_pos_control/MulticopterPositionControl.hpp](src/modules/mc_pos_control/MulticopterPositionControl.hpp) | Modified - STA parameter bindings |
+| [src/modules/mc_pos_control/MulticopterPositionControl.cpp](src/modules/mc_pos_control/MulticopterPositionControl.cpp) | Modified - STA parameter update and status publish |
+| [src/modules/mc_pos_control/multicopter_position_control_gain_params.c](src/modules/mc_pos_control/multicopter_position_control_gain_params.c) | Modified - add POS_STA_* parameters |
+| [src/modules/logger/logged_topics.cpp](src/modules/logger/logged_topics.cpp) | Modified - add STA log topics |
 
-The PX4 Dev Team syncs up on a [weekly dev call](https://docs.px4.io/main/en/contribute/).
+### Parameters and Defaults
 
-> **Note** The dev call is open to all interested developers (not just the core dev team). This is a great opportunity to meet the team and contribute to the ongoing development of the platform. It includes a QA session for newcomers. All regular calls are listed in the [Dronecode calendar](https://www.dronecode.org/calendar/).
+**Attitude rate STA parameters (mc_rate_control)**
 
+| Parameter | Default | Description |
+| --- | --- | --- |
+| `ATT_STA_R_C` | 0.0 | Roll sliding surface gain c |
+| `ATT_STA_P_C` | 0.0 | Pitch sliding surface gain c |
+| `ATT_STA_Y_C` | 0.0 | Yaw sliding surface gain c |
+| `ATT_STA_R_AL` | 0.15 | Roll nonlinear gain alpha |
+| `ATT_STA_P_AL` | 0.15 | Pitch nonlinear gain alpha |
+| `ATT_STA_Y_AL` | 0.20 | Yaw nonlinear gain alpha |
+| `ATT_STA_R_LA` | 0.20 | Roll disturbance gain lambda |
+| `ATT_STA_P_LA` | 0.20 | Pitch disturbance gain lambda |
+| `ATT_STA_Y_LA` | 0.10 | Yaw disturbance gain lambda |
+| `ATT_STA_R_LIM` | 0.30 | Roll w integrator limit |
+| `ATT_STA_P_LIM` | 0.30 | Pitch w integrator limit |
+| `ATT_STA_Y_LIM` | 0.30 | Yaw w integrator limit |
+| `ATT_STA_R_I` | 0.0030 | Roll inertia (I) |
+| `ATT_STA_P_I` | 0.0030 | Pitch inertia (I) |
+| `ATT_STA_Y_I` | 0.0 | Yaw inertia (I) |
+| `ATT_STA_R_NMAX` | 1.0 | Roll ita normalization max |
+| `ATT_STA_P_NMAX` | 1.0 | Pitch ita normalization max |
+| `ATT_STA_Y_NMAX` | 1.0 | Yaw ita normalization max |
+| `ATT_STA_R_NMIN` | 0.9 | Roll ita normalization min |
+| `ATT_STA_P_NMIN` | 0.9 | Pitch ita normalization min |
+| `ATT_STA_Y_NMIN` | 0.9 | Yaw ita normalization min |
 
-## Maintenance Team
+**Position/velocity STA parameters (mc_pos_control)**
 
-See the latest list of maintainers on [MAINTAINERS](MAINTAINERS.md) file at the root of the project.
-
-For the latest stats on contributors please see the latest stats for the Dronecode ecosystem in our project dashboard under [LFX Insights](https://insights.lfx.linuxfoundation.org/foundation/dronecode). For information on how to update your profile and affiliations please see the following support link on how to [Complete Your LFX Profile](https://docs.linuxfoundation.org/lfx/my-profile/complete-your-lfx-profile). Dronecode publishes a yearly snapshot of contributions and achievements on its [website under the Reports section](https://dronecode.org).
-
-## Supported Hardware
-
-For the most up to date information, please visit [PX4 User Guide > Autopilot Hardware](https://docs.px4.io/main/en/flight_controller/).
-
-## Project Governance
-
-The PX4 Autopilot project including all of its trademarks is hosted under [Dronecode](https://www.dronecode.org/), part of the Linux Foundation.
-
-<a href="https://www.dronecode.org/" style="padding:20px" ><img src="https://dronecode.org/wp-content/uploads/sites/24/2020/08/dronecode_logo_default-1.png" alt="Dronecode Logo" width="110px"/></a>
-<div style="padding:10px">&nbsp;</div>
+| Parameter | Default | Description |
+| --- | --- | --- |
+| `POS_STA_C` | 1.0 | Z-axis sliding surface gain c |
+| `POS_STA_MASS` | 0.0 | Mass parameter used in Z STA thrust term |
+| `POS_STA_AL` | 4.0 | Z-axis nonlinear gain alpha |
+| `POS_STA_LA` | 2.0 | Z-axis disturbance gain lambda |
+| `POS_STA_W_LIM` | 9.8 | Z-axis w integrator limit |
+| `POS_STA_NMAX` | 1.0 | Z-axis ita normalization max |
+| `POS_STA_NMIN` | 0.9 | Z-axis ita normalization min |
+| `POS_X_STA_NMAX` | 1.0 | X velocity error normalization max |
+| `POS_X_STA_NMIN` | 0.9 | X velocity error normalization min |
+| `POS_Y_STA_NMAX` | 1.0 | Y velocity error normalization max |
+| `POS_Y_STA_NMIN` | 0.9 | Y velocity error normalization min |
