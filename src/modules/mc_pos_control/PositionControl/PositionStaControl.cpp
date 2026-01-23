@@ -16,7 +16,7 @@ float PositionStaControl::update(const float dt, matrix::Vector3f& _pos, matrix:
 
 	// 获取 _pos_ita 的范数（绝对值）并限制其大小
 	float pos_sta_ita_norm;
-	pos_sta_ita_norm = math::constrain(fabs(_pos_ita), _pos_sta_norm_min, _pos_sta_norm_max);
+	pos_sta_ita_norm = math::constrain(fabsf(_pos_ita), _pos_sta_norm_min, _pos_sta_norm_max);
 
 	// 计算 _pos_ita 的符号
 	float pos_sta_ita_sign;
@@ -25,7 +25,7 @@ float PositionStaControl::update(const float dt, matrix::Vector3f& _pos, matrix:
 	// 计算推力命令（竖直方向）
 	_pos_thrust = -_mc_mass * _acc_sp(2)                                    // 期望加速度反馈（负值用于 Z 轴朝上）
 				+ _mc_mass * _pos_sta_c * (_vel(2) - _vel_sp(2))            // 速度误差
-				+ _pos_sta_alpha * sqrt(pos_sta_ita_norm) * pos_sta_ita_sign // STA非线性项
+				+ _pos_sta_alpha * sqrtf(pos_sta_ita_norm) * pos_sta_ita_sign // STA非线性项
 				+ _pos_sta_w;                                                // 积分 w
 
 	// 计算扰动补偿项的微分（w_dot）
@@ -68,7 +68,7 @@ float PositionStaControl::getVelErrorDivNorm(float vel_error, size_t axis)
 	if(axis >= 2) return 0.f;
 
 	// 获取速度误差的绝对值，并进行限幅
-	float vel_error_norm = fabs(vel_error);
+	float vel_error_norm = fabsf(vel_error);
 	vel_error_norm = math::constrain(vel_error_norm, _pos_xy_sta_norm_min(axis), _pos_xy_sta_norm_max(axis));
 
 	// 返回归一化后的速度误差

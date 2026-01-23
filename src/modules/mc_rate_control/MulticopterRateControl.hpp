@@ -61,7 +61,6 @@
 #include <uORB/topics/vehicle_thrust_setpoint.h>
 #include <uORB/topics/vehicle_torque_setpoint.h>
 #include <uORB/topics/attitude_error.h>
-#include <iostream>
 #include <uORB/topics/attitude_sta_status.h>
 
 using namespace time_literals;

@@ -67,7 +67,6 @@
 #include <uORB/topics/vehicle_land_detected.h>
 #include <uORB/topics/vehicle_local_position.h>
 #include <uORB/topics/vehicle_local_position_setpoint.h>
-#include <iostream>
 
 //my position sta status
 #include <uORB/topics/position_sta_status.h>
