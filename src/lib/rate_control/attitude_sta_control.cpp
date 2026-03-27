@@ -103,7 +103,7 @@ matrix::Vector3f AttitudeStaControl::update(matrix::Vector3f& attitude_error, co
 
 	// 计算 ita 范数并限幅（避免发散）
 	for(int i = 0;i < 3;++i){
-		att_ita_norm(i) = math::constrain(fabs(_att_ita(i)), _att_sta_norm_min(i), _att_sta_norm_max(i));
+		att_ita_norm(i) = math::constrain(fabsf(_att_ita(i)), _att_sta_norm_min(i), _att_sta_norm_max(i));
 	}
 
 	matrix::Vector3f ita_sign;
@@ -115,8 +115,8 @@ matrix::Vector3f AttitudeStaControl::update(matrix::Vector3f& attitude_error, co
 
 	// 计算输出控制力矩（三轴）
 	for(int i = 0;i < 3;++i){
-		_att_torque(i) =  _att_inertia(i) * _att_sta_c(i) * (rate(i) - rate_sp(i))  // 阻尼项（角速度误差）
-				+ _att_sta_alpha(i) * sqrt(att_ita_norm(i)) * ita_sign(i)          // 非线性稳定项
+			_att_torque(i) =  _att_inertia(i) * _att_sta_c(i) * (rate(i) - rate_sp(i))  // 阻尼项（角速度误差）
+					+ _att_sta_alpha(i) * sqrtf(att_ita_norm(i)) * ita_sign(i)          // 非线性稳定项
 			  	+ _att_sta_w(i)                                                    // 扰动补偿积分项
 				- _att_inertia(i) * angular_accel(i);                              // 动力学补偿项（角加速度）
 	}

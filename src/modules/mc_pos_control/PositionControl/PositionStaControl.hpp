@@ -40,6 +40,14 @@ public:
 		_pos_sta_w = 0;
 	}
 
+	void reset()
+	{
+		_pos_ita = 0.f;
+		_pos_thrust = 0.f;
+		_pos_sta_w = 0.f;
+		_pos_sta_w_dot = 0.f;
+	}
+
 	void lessPosStaW(float less_num)
 	{
 		_pos_sta_w -= less_num;

@@ -137,6 +137,16 @@ PARAM_DEFINE_FLOAT(MPC_Z_VEL_D_ACC, 0.f);
 PARAM_DEFINE_FLOAT(MPC_XY_VEL_D_ACC, 0.2f);
 
 
+/**
+ * Enable STA velocity control
+ *
+ * Enable STA-based velocity control logic.
+ *
+ * @boolean
+ * @group Multicopter Position Control
+ */
+PARAM_DEFINE_INT32(MPC_VEL_STA_EN, 0);
+
 /*自定义的滑膜变量的参数*/
 PARAM_DEFINE_FLOAT(POS_STA_C, 1.0f);
 

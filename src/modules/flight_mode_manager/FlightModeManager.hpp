@@ -56,7 +56,6 @@
 #include <uORB/topics/vehicle_local_position.h>
 #include <uORB/topics/vehicle_local_position_setpoint.h>
 #include <uORB/topics/vehicle_status.h>
-#include <iostream>
 #include <new>
 
 enum class FlightTaskError : int {

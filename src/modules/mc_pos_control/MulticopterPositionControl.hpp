@@ -67,7 +67,6 @@
 #include <uORB/topics/vehicle_land_detected.h>
 #include <uORB/topics/vehicle_local_position.h>
 #include <uORB/topics/vehicle_local_position_setpoint.h>
-#include <iostream>
 
 //my position sta status
 #include <uORB/topics/position_sta_status.h>
@@ -198,6 +197,8 @@ private:
 		(ParamFloat<px4::params::MPC_XY_ERR_MAX>) _param_mpc_xy_err_max,
 		(ParamFloat<px4::params::MPC_YAWRAUTO_MAX>) _param_mpc_yawrauto_max,
 		(ParamFloat<px4::params::MPC_YAWRAUTO_ACC>) _param_mpc_yawrauto_acc,
+
+		(ParamInt<px4::params::MPC_VEL_STA_EN>)     _param_mpc_vel_sta_en,
 
 		//position supertwisting control
 		(ParamFloat<px4::params::POS_STA_C>) _param_pos_sta_c,  /**< example parameter */
